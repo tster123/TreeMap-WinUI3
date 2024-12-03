@@ -36,7 +36,8 @@ namespace ExampleApp
 
         private void RenderCanvas()
         {
-            if (double.IsNaN(canvas.Width) || double.IsNaN(canvas.Height)) return;
+            canvas.Children.Clear();
+            if (double.IsNaN(canvas.ActualHeight) || double.IsNaN(canvas.ActualWidth)) return;
             var radialBrush = new RadialGradientBrush
             {
                 MappingMode = BrushMappingMode.RelativeToBoundingBox,
@@ -60,7 +61,7 @@ namespace ExampleApp
             };
 
             TreeMapPlacer placer = new TreeMapPlacer();
-            var placements = placer.GetPlacements(Files.Select(f => new TreeMapInput<FileInfo>(f.Length, f)), canvas.Width, canvas.Height);
+            var placements = placer.GetPlacements(Files.Select(f => new TreeMapInput<FileInfo>(f.Length, f)), canvas.ActualWidth, canvas.ActualHeight);
 
             foreach (var placement in placements)
             {

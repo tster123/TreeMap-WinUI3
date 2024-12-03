@@ -13,10 +13,10 @@
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
-            <RowDefinition Height="100"></RowDefinition>
-            <RowDefinition Height="12"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="20"></RowDefinition>
         </Grid.RowDefinitions>
-        <Canvas x:Name="canvas" Grid.Row="0" Height="100" Width="200"></Canvas>
+        <Canvas x:Name="canvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="LightGray"></Canvas>
         <TextBlock x:Name="fileText" Grid.Row="1"/>
     </Grid>
 </Window>
