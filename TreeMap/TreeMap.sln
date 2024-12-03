@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMap", "TreeMap\TreeMap.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleApp", "ExampleApp\ExampleApp.csproj", "{723EE88C-F551-4EA0-A556-EB14FED8451A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMapLib", "TreeMapLib\TreeMapLib.csproj", "{EAE50F03-8238-4825-B258-DC44FEC17442}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMapLib.UnitTest", "TreeMapLib.UnitTest\TreeMapLib.UnitTest.csproj", "{E72867DF-AC21-453E-8282-86125C617A2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +27,14 @@ Global
 		{723EE88C-F551-4EA0-A556-EB14FED8451A}.Release|Any CPU.ActiveCfg = Release|x64
 		{723EE88C-F551-4EA0-A556-EB14FED8451A}.Release|Any CPU.Build.0 = Release|x64
 		{723EE88C-F551-4EA0-A556-EB14FED8451A}.Release|Any CPU.Deploy.0 = Release|x64
+		{EAE50F03-8238-4825-B258-DC44FEC17442}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAE50F03-8238-4825-B258-DC44FEC17442}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAE50F03-8238-4825-B258-DC44FEC17442}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAE50F03-8238-4825-B258-DC44FEC17442}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E72867DF-AC21-453E-8282-86125C617A2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E72867DF-AC21-453E-8282-86125C617A2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E72867DF-AC21-453E-8282-86125C617A2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E72867DF-AC21-453E-8282-86125C617A2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

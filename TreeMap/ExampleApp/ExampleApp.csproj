@@ -40,6 +40,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.241114003" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\TreeMapLib\TreeMapLib.csproj" />
     <ProjectReference Include="..\TreeMap\TreeMap.csproj" />
   </ItemGroup>
 
