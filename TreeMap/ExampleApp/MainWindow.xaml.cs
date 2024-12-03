@@ -15,6 +15,7 @@ using Windows.Foundation.Collections;
 using ABI.Windows.UI;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
+using TreeMap;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -30,8 +31,12 @@ namespace ExampleApp
         {
             InitializeComponent();
             Files = new DirectoryInfo("C:\\Users\\thboo\\Downloads").GetFiles().ToList();
-            double totalSize = Files.Sum(f => f.Length);
-            int x = 0;
+            canvas.SizeChanged += (_, _) => RenderCanvas();
+        }
+
+        private void RenderCanvas()
+        {
+            if (double.IsNaN(canvas.Width) || double.IsNaN(canvas.Height)) return;
             var radialBrush = new RadialGradientBrush
             {
                 MappingMode = BrushMappingMode.RelativeToBoundingBox,
@@ -53,32 +58,33 @@ namespace ExampleApp
                     }
                 }
             };
-            foreach (var file in Files)
-            {
-                double percentageOfTotal = file.Length / totalSize;
 
+            TreeMapPlacer placer = new TreeMapPlacer();
+            var placements = placer.GetPlacements(Files.Select(f => new TreeMapInput<FileInfo>(f.Length, f)), canvas.Width, canvas.Height);
+
+            foreach (var placement in placements)
+            {
                 var rect = new Rectangle
                 {
                     Fill = radialBrush,
-                    Height = 300 * percentageOfTotal,
-                    Width = 30
+                    Height = placement.Rectangle.Height,
+                    Width = placement.Rectangle.Width,
                 };
                 canvas.Children.Add(rect);
-                rect.SetValue(Canvas.TopProperty, 0);
-                rect.SetValue(Canvas.LeftProperty, x);
+                rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
+                rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
                 ToolTip t = new ToolTip();
-                t.Content = file.FullName;
+                t.Content = placement.Item.FullName;
                 ToolTipService.SetToolTip(rect, t);
                 rect.PointerEntered += (object sender, PointerRoutedEventArgs e) =>
                 {
-                    fileText.Text = file.FullName;
+                    fileText.Text = placement.Item.FullName;
                     rect.Fill = new SolidColorBrush(Colors.Azure);
                 };
                 rect.PointerExited += (object sender, PointerRoutedEventArgs e) =>
                 {
                     rect.Fill = radialBrush;
                 };
-                x += 35;
             }
         }
 

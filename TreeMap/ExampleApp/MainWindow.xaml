@@ -8,10 +8,15 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:io="using:System.IO"
     mc:Ignorable="d"
-    Title="ExampleApp">
+    Title="ExampleApp"
+    x:Name="window">
 
-    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
-        <TextBlock x:Name="fileText"/>
-        <Canvas x:Name="canvas"></Canvas>
-    </StackPanel>
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="100"></RowDefinition>
+            <RowDefinition Height="12"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Canvas x:Name="canvas" Grid.Row="0" Height="100" Width="200"></Canvas>
+        <TextBlock x:Name="fileText" Grid.Row="1"/>
+    </Grid>
 </Window>
