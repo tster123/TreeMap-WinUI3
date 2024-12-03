@@ -46,7 +46,13 @@ public class Folder(string parentName, string name)
         if (Files.Count > 0)
         {
             long filesSize = Files.Sum(f => f.Length);
-            children.Add(new TreeMapInput<FileSystemNode>(filesSize, new FileSystemNode(FullName, "<files>", filesSize), []));
+            List<ITreeMapInput<FileSystemNode>> fileChildren = new();
+            foreach (FileInfo file in Files)
+            {
+                fileChildren.Add(new TreeMapInput<FileSystemNode>(file.Length, new FileSystemNode(FullName, file.Name, file.Length), []));
+            }
+
+            children.Add(new TreeMapInput<FileSystemNode>(filesSize, new FileSystemNode(FullName, "<files>", filesSize), fileChildren.ToArray()));
         }
 
         foreach (var child in Children)
