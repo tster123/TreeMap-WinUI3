@@ -168,9 +168,9 @@ public sealed partial class MainWindow : Window
 
     private Color[] colors =
     [
-        Colors.DarkBlue, Colors.Red, Colors.Green, Colors.DarkSeaGreen, Colors.Beige, Colors.Pink, Colors.Purple,
-        Colors.Magenta, Colors.Aquamarine, Colors.Brown, Colors.Coral, Colors.SlateBlue, Colors.Salmon,
-        Colors.Orange, Colors.Gold, Colors.DarkGreen, Colors.DeepPink, Colors.DarkRed
+        Colors.DarkBlue, Colors.DarkRed, Colors.DarkGreen, Colors.DarkSeaGreen, Colors.Purple, Colors.DeepPink,
+        Colors.Magenta, Colors.Brown, Colors.Coral, Colors.SlateBlue, Colors.Salmon,
+        Colors.Orange, Colors.Gold, Colors.Green, Colors.Pink, Colors.DarkRed, Colors.Beige
     ];
 
     private int nextColorIndex = 0;
