@@ -7,13 +7,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Windows.Foundation;
-using ABI.Windows.ApplicationModel.Contacts.DataProvider;
-using ABI.Windows.UI;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
 using TreeMap;
 using Color = Windows.UI.Color;
-using Path = Microsoft.UI.Xaml.Shapes.Path;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -268,6 +265,10 @@ public sealed partial class MainWindow : Window
         {
             colorer = new AgeColoring();
         }
+        else if (colorBy == "Extension & Age")
+        {
+            colorer = new ExtensionAndAgeColoring();
+        }
         else
         {
             throw new ArgumentException("Cannot find colorer: [" + colorBy + "]");
@@ -312,7 +313,7 @@ public class ExtensionColoring : IColorer<FileInfo>
 
 public class AgeColoring : IColorer<FileInfo>
 {
-    public string GetFlavor(FileInfo file)
+    public virtual string GetFlavor(FileInfo file)
     {
         return "";
     }
@@ -342,5 +343,13 @@ public class AgeColoring : IColorer<FileInfo>
         if (file.LastWriteTime.Year < 1990) return file.CreationTime;
         if (file.LastWriteTime < file.CreationTime) return file.LastWriteTime;
         return file.CreationTime;
+    }
+}
+
+public class ExtensionAndAgeColoring : AgeColoring
+{
+    public override string GetFlavor(FileInfo file)
+    {
+        return file.Extension.ToLower();
     }
 }
