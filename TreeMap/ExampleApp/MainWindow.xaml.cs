@@ -11,6 +11,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
 using TreeMap;
 using Color = Windows.UI.Color;
+using Rect = TreeMap.Rect;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -73,6 +74,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _showContainers = showContainersCheckbox.IsChecked ?? false;
         Files = new DirectoryInfo("C:\\Users\\thboo\\OneDrive").GetFiles("*", SearchOption.AllDirectories).Where(i => i.Length > 100000).ToList();
         canvas.SizeChanged += (_, _) => RenderCanvas();
     }
@@ -113,57 +115,113 @@ public sealed partial class MainWindow : Window
     private IColorer<FileInfo> colorer = new ExtensionColoring();
     private void RenderCanvas()
     {
+        if (canvas == null) return;
         canvas.Children.Clear();
         FlavorToBrush = new();
         nextColorIndex = 0;
         if (double.IsNaN(canvas.ActualHeight) || double.IsNaN(canvas.ActualWidth)) return;
 
         TreeMapPlacer placer = new TreeMapPlacer();
+        placer.RenderContainers = _showContainers;
         ITreeMapInput<FileSystemNode>[] input = GetTreeMapInputs();
         TreeMapBox<FileSystemNode>[] placements = placer.GetPlacements(input, canvas.ActualWidth, canvas.ActualHeight).ToArray();
         colorer.Initialize(placements.Select(p => p.Item.FileInfo).Where(f => f != null).Select(f => f!));
         foreach (var placement in placements)
         {
-            Brush brush;
-            if (placement.Item.FileInfo == null)
+            if (placement.IsContainer)
             {
-                brush = DefaultBrush;
+                RenderContainerPlacement(placement);
             }
             else
             {
-                string flavor = colorer.GetFlavor(placement.Item.FileInfo!);
-
-                if (!FlavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
-                {
-                    brushBase = GenerateNextBrush();
-                    FlavorToBrush[flavor] = brushBase;
-                }
-
-                brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item.FileInfo));
+                RenderLeafPlacement(placement);
             }
-            
-            var rect = new Rectangle
-            {
-                Fill = brush,
-                Height = placement.Rectangle.Height,
-                Width = placement.Rectangle.Width,
-            };
-            canvas.Children.Add(rect);
-            rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
-            rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
-            ToolTip t = new ToolTip();
-            t.Content = placement.Item.FullName;
-            ToolTipService.SetToolTip(rect, t);
-            rect.PointerEntered += (object sender, PointerRoutedEventArgs e) =>
-            {
-                fileText.Text = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0");
-                rect.Fill = new SolidColorBrush(Colors.Azure);
-            };
-            rect.PointerExited += (object sender, PointerRoutedEventArgs e) =>
-            {
-                rect.Fill = brush;
-            };
         }
+    }
+
+    private void RenderContainerPlacement(TreeMapBox<FileSystemNode> placement)
+    {
+        Rect r = placement.Rectangle;
+        var textBlock = new TextBlock
+        {
+            Text = placement.Item.FullName,
+            Height = placement.ContainerHeaderHeightPixels,
+            FontSize = placement.ContainerHeaderHeightPixels - 2,
+            Foreground = new SolidColorBrush(Colors.Black),
+        };
+        var header = new Border
+        {
+            Background = new SolidColorBrush(Colors.LightGray),
+            Child = textBlock
+        };
+        canvas.Children.Add(header);
+        header.SetValue(Canvas.TopProperty, r.Y + placement.BorderThicknessPixels);
+        header.SetValue(Canvas.LeftProperty, r.X + placement.BorderThicknessPixels);
+        textBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        if (r.Width < 6 * placement.Item.FullName.Length)
+        {
+            textBlock.Text = "..." + textBlock.Text.Substring((int)(textBlock.Text.Length - r.Width / 6));
+
+        }
+
+        var border = new Polyline
+        {
+            Points =
+            [
+                new(0, 0),
+                new(0, r.Height),
+                new(r.Width, r.Height),
+                new(r.Width, 0),
+                new(0, 0)
+            ],
+            Stroke = new SolidColorBrush(Colors.Black)
+        };
+        canvas.Children.Add(border);
+        border.SetValue(Canvas.TopProperty, r.Y);
+        border.SetValue(Canvas.LeftProperty, r.X);
+    }
+
+    private void RenderLeafPlacement(TreeMapBox<FileSystemNode> placement)
+    {
+        Brush brush;
+        if (placement.Item.FileInfo == null)
+        {
+            brush = DefaultBrush;
+        }
+        else
+        {
+            string flavor = colorer.GetFlavor(placement.Item.FileInfo!);
+
+            if (!FlavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
+            {
+                brushBase = GenerateNextBrush();
+                FlavorToBrush[flavor] = brushBase;
+            }
+
+            brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item.FileInfo));
+        }
+            
+        var rect = new Rectangle
+        {
+            Fill = brush,
+            Height = placement.Rectangle.Height,
+            Width = placement.Rectangle.Width,
+        };
+        canvas.Children.Add(rect);
+        rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
+        rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
+        ToolTip t = new ToolTip();
+        t.Content = placement.Item.FullName;
+        ToolTipService.SetToolTip(rect, t);
+        rect.PointerEntered += (object sender, PointerRoutedEventArgs e) =>
+        {
+            fileText.Text = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0");
+            rect.Fill = new SolidColorBrush(Colors.Azure);
+        };
+        rect.PointerExited += (object sender, PointerRoutedEventArgs e) =>
+        {
+            rect.Fill = brush;
+        };
     }
 
     private Color[] colors =
@@ -273,6 +331,19 @@ public sealed partial class MainWindow : Window
         {
             throw new ArgumentException("Cannot find colorer: [" + colorBy + "]");
         }
+        RenderCanvas();
+    }
+
+    private bool _showContainers;
+    private void ShowContainersChecked(object sender, RoutedEventArgs e)
+    {
+        _showContainers = true;
+        RenderCanvas();
+    }
+
+    private void ShowContainersUnchecked(object sender, RoutedEventArgs e)
+    {
+        _showContainers = false;
         RenderCanvas();
     }
 }

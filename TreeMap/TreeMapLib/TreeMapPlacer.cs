@@ -10,6 +10,9 @@ public class TreeMapBox<T>(T item, Rect rectangle)
 {
     public T Item = item;
     public Rect Rectangle = rectangle;
+    public bool IsContainer = false;
+    public double ContainerHeaderHeightPixels;
+    public double BorderThicknessPixels;
 }
 
 public interface ITreeMapInput<T>
@@ -28,10 +31,28 @@ public class TreeMapInput<T>(double size, T item, ITreeMapInput<T>[] children) :
 
 public class TreeMapPlacer
 {
+    /// <summary>
+    /// Set to true to enable containers to render around the leaves
+    /// </summary>
+    public bool RenderContainers = false;
+    /// <summary>
+    /// Percentage of the total area that a container must occupy in order to render the container
+    /// </summary>
+    public double MinimumAreaForContainerRender = 0.005;
+
+    /// <summary>
+    /// Pixels of header height for rendering containers
+    /// </summary>
+    public double ContainerHeaderHeightPixels = 15;
+
+    public double ContainerBorderWidthPixels = 2;
+
+    private double _totalArea;
     public IEnumerable<TreeMapBox<T>> GetPlacements<T>(IEnumerable<ITreeMapInput<T>> input, double width, double height)
     {
         var sorted = input.Where(i => i.Size > 0).OrderByDescending(i => i.Size).ToList();
         if (sorted.Count == 0) throw new ArgumentException("Must have some elements to sort");
+        _totalArea = width * height;
         return GetPlacementsSorted(sorted, 0, 0, width, height);
     }
 
@@ -123,9 +144,31 @@ public class TreeMapPlacer
         }
         else
         {
+            double x = rect.X;
+            double y = rect.Y;
+            double xPrime = x + rect.Width;
+            double yPrime = y + rect.Height;
+
+            if (RenderContainers && input.Children.Length > 0)
+            {
+                // check if the container is large enough to render as a container
+                if (rect.Height * rect.Height > _totalArea * MinimumAreaForContainerRender)
+                {
+                    yield return new TreeMapBox<T>(input.Item, rect)
+                    {
+                        IsContainer = true,
+                        ContainerHeaderHeightPixels = ContainerHeaderHeightPixels - ContainerBorderWidthPixels,
+                        BorderThicknessPixels = ContainerBorderWidthPixels
+                    };
+                    x += ContainerBorderWidthPixels;
+                    xPrime -= ContainerBorderWidthPixels;
+                    yPrime -= ContainerBorderWidthPixels;
+                    y += ContainerHeaderHeightPixels;
+                }
+            }
             var sorted = input.Children.Where(i => i.Size > 0).OrderByDescending(i => i.Size).ToList();
             Debug.Assert(sorted.Count > 0);
-            foreach (var p in GetPlacementsSorted(sorted, rect.X, rect.Y, rect.X + rect.Width, rect.Y + rect.Height))
+            foreach (var p in GetPlacementsSorted(sorted, x, y, xPrime, yPrime))
             {
                 yield return p;
             }

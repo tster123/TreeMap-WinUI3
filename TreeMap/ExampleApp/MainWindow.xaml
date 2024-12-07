@@ -17,12 +17,13 @@
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="20"></RowDefinition>
         </Grid.RowDefinitions>
-        <Grid ColumnDefinitions="100, *">
-            <ComboBox x:Name="coloringDropdown" SelectionChanged="coloringChanged" Header="Colors" PlaceholderText="Color by..." Width="200">
+        <Grid ColumnDefinitions="200, 200, *">
+            <ComboBox x:Name="coloringDropdown" SelectionChanged="coloringChanged" Header="Colors" PlaceholderText="Color by..." Width="200" Grid.Column="0">
                 <x:String>Extension</x:String>
                 <x:String>File Age</x:String>
                 <x:String>Extension &amp; Age</x:String>
             </ComboBox>
+            <CheckBox x:Name="showContainersCheckbox" Content="Show Containers" Checked="ShowContainersChecked" Unchecked="ShowContainersUnchecked" IsChecked="True" Grid.Column="1" />
         </Grid>
         <Canvas x:Name="canvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="LightGray" Grid.Row="1"></Canvas>
         <TextBlock x:Name="fileText" Grid.Row="2"/>
