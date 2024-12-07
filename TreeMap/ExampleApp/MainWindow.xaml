@@ -13,10 +13,17 @@
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
+            <RowDefinition Height="100"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="20"></RowDefinition>
         </Grid.RowDefinitions>
-        <Canvas x:Name="canvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="LightGray"></Canvas>
-        <TextBlock x:Name="fileText" Grid.Row="1"/>
+        <Grid ColumnDefinitions="100, *">
+            <ComboBox x:Name="coloringDropdown" SelectionChanged="coloringChanged" Header="Colors" PlaceholderText="Color by..." Width="200">
+                <x:String>Extension</x:String>
+                <x:String>File Age</x:String>
+            </ComboBox>
+        </Grid>
+        <Canvas x:Name="canvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="LightGray" Grid.Row="1"></Canvas>
+        <TextBlock x:Name="fileText" Grid.Row="2"/>
     </Grid>
 </Window>

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Windows.Foundation;
+using ABI.Windows.ApplicationModel.Contacts.DataProvider;
 using ABI.Windows.UI;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
@@ -51,10 +53,10 @@ public class Folder(string parentName, string name)
             List<ITreeMapInput<FileSystemNode>> fileChildren = new();
             foreach (FileInfo file in Files)
             {
-                fileChildren.Add(new TreeMapInput<FileSystemNode>(file.Length, new FileSystemNode(FullName, file.Name, file.Length), []));
+                fileChildren.Add(new TreeMapInput<FileSystemNode>(file.Length, new FileSystemNode(FullName, file.Name, file.Length, file), []));
             }
 
-            children.Add(new TreeMapInput<FileSystemNode>(filesSize, new FileSystemNode(FullName, "<files>", filesSize), fileChildren.ToArray()));
+            children.Add(new TreeMapInput<FileSystemNode>(filesSize, new FileSystemNode(FullName, "<files>", filesSize, null), fileChildren.ToArray()));
         }
 
         foreach (var child in Children)
@@ -62,7 +64,7 @@ public class Folder(string parentName, string name)
             children.Add(child.Value.GetTreeMapInput());
         }
 
-        return new(Size, new FileSystemNode(ParentName, Name, Size), children.ToArray());
+        return new(Size, new FileSystemNode(ParentName, Name, Size, null), children.ToArray());
     }
 }
 
@@ -110,32 +112,39 @@ public sealed partial class MainWindow : Window
 
     }
 
-    private Dictionary<string, Brush> FlavorToBrush = new();
-
+    private Dictionary<string, BrushBase> FlavorToBrush = new();
+    private IColorer<FileInfo> colorer = new ExtensionColoring();
     private void RenderCanvas()
     {
         canvas.Children.Clear();
+        FlavorToBrush = new();
+        nextColorIndex = 0;
         if (double.IsNaN(canvas.ActualHeight) || double.IsNaN(canvas.ActualWidth)) return;
 
         TreeMapPlacer placer = new TreeMapPlacer();
         ITreeMapInput<FileSystemNode>[] input = GetTreeMapInputs();
-        var placements = placer.GetPlacements(input, canvas.ActualWidth, canvas.ActualHeight);
-
+        TreeMapBox<FileSystemNode>[] placements = placer.GetPlacements(input, canvas.ActualWidth, canvas.ActualHeight).ToArray();
+        colorer.Initialize(placements.Select(p => p.Item.FileInfo).Where(f => f != null).Select(f => f!));
         foreach (var placement in placements)
         {
-            string extension = "";
-            if (placement.Item.FullName.LastIndexOf('.') >= 0)
+            Brush brush;
+            if (placement.Item.FileInfo == null)
             {
-                extension = placement.Item.FullName.Substring(placement.Item.FullName.LastIndexOf('.'));
+                brush = DefaultBrush;
             }
-
-            extension = extension.ToLower();
-            if (!FlavorToBrush.TryGetValue(extension, out Brush? brush))
+            else
             {
-                brush = GenerateNextBrush();
-                FlavorToBrush[extension] = brush;
-            }
+                string flavor = colorer.GetFlavor(placement.Item.FileInfo!);
 
+                if (!FlavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
+                {
+                    brushBase = GenerateNextBrush();
+                    FlavorToBrush[flavor] = brushBase;
+                }
+
+                brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item.FileInfo));
+            }
+            
             var rect = new Rectangle
             {
                 Fill = brush,
@@ -162,13 +171,13 @@ public sealed partial class MainWindow : Window
 
     private Color[] colors =
     [
-        Colors.Blue, Colors.Red, Colors.Green, Colors.Yellow, Colors.Beige, Colors.Pink, Colors.Purple,
+        Colors.DarkBlue, Colors.Red, Colors.Green, Colors.DarkSeaGreen, Colors.Beige, Colors.Pink, Colors.Purple,
         Colors.Magenta, Colors.Aquamarine, Colors.Brown, Colors.Coral, Colors.SlateBlue, Colors.Salmon,
-        Colors.Orange, Colors.Gold
+        Colors.Orange, Colors.Gold, Colors.DarkGreen, Colors.DeepPink, Colors.DarkRed
     ];
 
     private int nextColorIndex = 0;
-    private Brush GenerateNextBrush()
+    private BrushBase GenerateNextBrush()
     {
         Color color = Colors.Gray;
         if (nextColorIndex < colors.Length)
@@ -176,13 +185,53 @@ public sealed partial class MainWindow : Window
             color = colors[nextColorIndex];
             nextColorIndex++;
         }
-        var lightColor = new Color
+        return new BrushBase(color);
+    }
+
+    private class BrushBase
+    {
+        private readonly Color BaseColor;
+        private Brush?[] fadingBrushes;
+
+        public BrushBase(Color baseColor)
         {
-            A = color.A,
-            B = (byte)(color.B + (byte)(0.4 * (256 - color.B))),
-            G = (byte)(color.G + (byte)(0.4 * (256 - color.G))),
-            R = (byte)(color.R + (byte)(0.4 * (256 - color.R)))
+            BaseColor = baseColor;
+            fadingBrushes = new Brush?[101];
+        }
+
+        public Brush GetBrushByStrength(double strength)
+        {
+            int strengthInt = (int)(strength * 100);
+            if (strength < 0)
+            {
+                strengthInt = 0;
+                strength = 1;
+            }
+            if (fadingBrushes[strengthInt] == null)
+            {
+                fadingBrushes[strengthInt] = CreateBrush(FadeColor(BaseColor, strength));
+            }
+
+            return fadingBrushes[strengthInt]!;
+        }
+    }
+
+    private static Color FadeColor(Color baseColor, double strength)
+    {
+        double fadeBy = 1 - strength;        
+        return new Color
+        {
+            A = baseColor.A,
+            B = (byte)(baseColor.B + (byte)(fadeBy * (256 - baseColor.B))),
+            G = (byte)(baseColor.G + (byte)(fadeBy * (256 - baseColor.G))),
+            R = (byte)(baseColor.R + (byte)(fadeBy * (256 - baseColor.R)))
         };
+    }
+
+    private static Brush DefaultBrush = CreateBrush(Colors.Black);
+    private static Brush CreateBrush(Color color)
+    {
+        var lightColor = FadeColor(color, 0.4);
         return new RadialGradientBrush
         {
             MappingMode = BrushMappingMode.RelativeToBoundingBox,
@@ -206,14 +255,92 @@ public sealed partial class MainWindow : Window
     }
 
     public List<FileInfo> Files { get; set; }
+
+    private void coloringChanged(object sender, SelectionChangedEventArgs e)
+    {
+        string? colorBy = e.AddedItems.FirstOrDefault() as string;
+        if (colorBy == null) colorBy = "Extension";
+        if (colorBy == "Extension")
+        {
+            colorer = new ExtensionColoring();
+        }
+        else if (colorBy == "File Age")
+        {
+            colorer = new AgeColoring();
+        }
+        else
+        {
+            throw new ArgumentException("Cannot find colorer: [" + colorBy + "]");
+        }
+        RenderCanvas();
+    }
 }
 
-public class FileSystemNode(string folderName, string name, long size)
+public class FileSystemNode(string folderName, string name, long size, FileInfo? fileInfo)
 {
     public string FolderName { get; } = folderName;
     public string Name { get; } = name;
     public readonly string FullName = System.IO.Path.Combine(folderName, name);
     public long Size { get; } = size;
+    public FileInfo? FileInfo { get; } = fileInfo;
 
-    public override string ToString() => System.IO.Path.Combine(FolderName, Name);
+    public override string ToString() => FileInfo?.FullName ?? System.IO.Path.Combine(FolderName, Name);
+}
+
+public interface IColorer<T>
+{
+    string GetFlavor(T item);
+    double GetColorStrength(T item);
+
+    void Initialize(IEnumerable<T> allItems)
+    {
+    }
+}
+
+public class ExtensionColoring : IColorer<FileInfo>
+{
+    public string GetFlavor(FileInfo file)
+    {
+        return file.Extension.ToLower();
+    }
+
+    public double GetColorStrength(FileInfo file)
+    {
+        return 1;
+    }
+}
+
+public class AgeColoring : IColorer<FileInfo>
+{
+    public string GetFlavor(FileInfo file)
+    {
+        return "";
+    }
+
+    public double GetColorStrength(FileInfo file)
+    {
+        TimeSpan fromStart = GetDate(file).Subtract(minAge);
+        return fromStart.Ticks / tickSpan;
+    }
+
+    private DateTime minAge = DateTime.MaxValue, maxAge = DateTime.MinValue;
+    private double tickSpan;
+    public void Initialize(IEnumerable<FileInfo> allItems)
+    {
+        foreach (FileInfo item in allItems)
+        {
+            DateTime date = GetDate(item);
+            if (minAge > date) minAge = date;
+            if (maxAge < date) maxAge = date;
+        }
+        tickSpan = (maxAge - minAge).Ticks;
+    }
+
+    private static DateTime GetDate(FileInfo file)
+    {
+        if (file.CreationTime.Year < 1990) return file.LastWriteTime;
+        if (file.LastWriteTime.Year < 1990) return file.CreationTime;
+        if (file.LastWriteTime < file.CreationTime) return file.LastWriteTime;
+        return file.CreationTime;
+    }
 }
