@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Windows.Foundation;
+using ABI.Windows.UI;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
 using TreeMap;
+using Color = Windows.UI.Color;
 using Path = Microsoft.UI.Xaml.Shapes.Path;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -108,30 +110,12 @@ public sealed partial class MainWindow : Window
 
     }
 
+    private Dictionary<string, Brush> FlavorToBrush = new();
+
     private void RenderCanvas()
     {
         canvas.Children.Clear();
         if (double.IsNaN(canvas.ActualHeight) || double.IsNaN(canvas.ActualWidth)) return;
-        var radialBrush = new RadialGradientBrush
-        {
-            MappingMode = BrushMappingMode.RelativeToBoundingBox,
-            Center = new Point(1, 1),
-            RadiusX = 1,
-            RadiusY = 1,
-            GradientStops =
-            {
-                new GradientStop
-                {
-                    Color = Colors.LightBlue,
-                    Offset = 0
-                },
-                new GradientStop
-                {
-                    Color = Colors.Blue,
-                    Offset = 1
-                }
-            }
-        };
 
         TreeMapPlacer placer = new TreeMapPlacer();
         ITreeMapInput<FileSystemNode>[] input = GetTreeMapInputs();
@@ -139,9 +123,22 @@ public sealed partial class MainWindow : Window
 
         foreach (var placement in placements)
         {
+            string extension = "";
+            if (placement.Item.FullName.LastIndexOf('.') >= 0)
+            {
+                extension = placement.Item.FullName.Substring(placement.Item.FullName.LastIndexOf('.'));
+            }
+
+            extension = extension.ToLower();
+            if (!FlavorToBrush.TryGetValue(extension, out Brush? brush))
+            {
+                brush = GenerateNextBrush();
+                FlavorToBrush[extension] = brush;
+            }
+
             var rect = new Rectangle
             {
-                Fill = radialBrush,
+                Fill = brush,
                 Height = placement.Rectangle.Height,
                 Width = placement.Rectangle.Width,
             };
@@ -158,9 +155,54 @@ public sealed partial class MainWindow : Window
             };
             rect.PointerExited += (object sender, PointerRoutedEventArgs e) =>
             {
-                rect.Fill = radialBrush;
+                rect.Fill = brush;
             };
         }
+    }
+
+    private Color[] colors =
+    [
+        Colors.Blue, Colors.Red, Colors.Green, Colors.Yellow, Colors.Beige, Colors.Pink, Colors.Purple,
+        Colors.Magenta, Colors.Aquamarine, Colors.Brown, Colors.Coral, Colors.SlateBlue, Colors.Salmon,
+        Colors.Orange, Colors.Gold
+    ];
+
+    private int nextColorIndex = 0;
+    private Brush GenerateNextBrush()
+    {
+        Color color = Colors.Gray;
+        if (nextColorIndex < colors.Length)
+        {
+            color = colors[nextColorIndex];
+            nextColorIndex++;
+        }
+        var lightColor = new Color
+        {
+            A = color.A,
+            B = (byte)(color.B + (byte)(0.4 * (256 - color.B))),
+            G = (byte)(color.G + (byte)(0.4 * (256 - color.G))),
+            R = (byte)(color.R + (byte)(0.4 * (256 - color.R)))
+        };
+        return new RadialGradientBrush
+        {
+            MappingMode = BrushMappingMode.RelativeToBoundingBox,
+            Center = new Point(1, 1),
+            RadiusX = 1,
+            RadiusY = 1,
+            GradientStops =
+            {
+                new GradientStop
+                {
+                    Color = lightColor,
+                    Offset = 0
+                },
+                new GradientStop
+                {
+                    Color = color,
+                    Offset = 1
+                }
+            }
+        };
     }
 
     public List<FileInfo> Files { get; set; }

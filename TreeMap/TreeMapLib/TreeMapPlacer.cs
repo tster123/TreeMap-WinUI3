@@ -63,8 +63,8 @@ public class TreeMapPlacer
             if (width > height)
             {
                 double boxWidth = boxArea / (yPrime - y);
-                foreach (var i in RenderNode(sorted[0], new Rect(x, y, boxWidth, yPrime - y))) yield return i;
-                foreach (var i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x + boxWidth, y, xPrime, yPrime))
+                foreach (TreeMapBox<T> i in RenderNode(sorted[0], new Rect(x, y, boxWidth, yPrime - y))) yield return i;
+                foreach (TreeMapBox<T> i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x + boxWidth, y, xPrime, yPrime))
                 {
                     yield return i;
                 }
@@ -72,8 +72,8 @@ public class TreeMapPlacer
             else
             {
                 double boxHeight = boxArea / (xPrime - x);
-                foreach (var i in RenderNode(sorted[0], new Rect(x, y, xPrime - x, boxHeight))) yield return i;
-                foreach (var i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x, y + boxHeight, xPrime, yPrime))
+                foreach (TreeMapBox<T> i in RenderNode(sorted[0], new Rect(x, y, xPrime - x, boxHeight))) yield return i;
+                foreach (TreeMapBox<T> i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x, y + boxHeight, xPrime, yPrime))
                 {
                     yield return i;
                 }
