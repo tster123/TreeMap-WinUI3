@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:AvaloniaUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AvaloniaUI.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="Aqua">
+	<Design.DataContext>
+		<!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+		<vm:MainViewModel />
+	</Design.DataContext>
+	<DockPanel VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+		<WrapPanel DockPanel.Dock="Top">
+			<Grid RowDefinitions="20, *" Background="Red" Margin="5">
+				<Label Target="RenderDropDown">Rendering Method:</Label>
+				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" SelectedIndex="0">
+					<ComboBoxItem>Extension</ComboBoxItem>
+					<ComboBoxItem>File Age</ComboBoxItem>
+					<ComboBoxItem>Extension &amp; Age</ComboBoxItem>
+				</ComboBox>
+			</Grid>
+            <CheckBox Name="ShowContainersCheckbox" IsChecked="True">Show Containers</CheckBox>
+		</WrapPanel>
+		<StackPanel Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
+			<TextBlock Name="HoverText" Text="Foo Bar"/>
+		</StackPanel>
+		<Canvas Name="Canvas" />
+	</DockPanel>
+</UserControl>

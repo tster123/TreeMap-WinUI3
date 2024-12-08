@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35514.174 d17.12
+VisualStudioVersion = 17.12.35514.174
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMap", "TreeMap\TreeMap.csproj", "{1C77549F-48BB-4940-90B2-5D51F576C1AB}"
 EndProject
@@ -10,6 +10,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMapLib", "TreeMapLib\TreeMapLib.csproj", "{EAE50F03-8238-4825-B258-DC44FEC17442}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeMapLib.UnitTest", "TreeMapLib.UnitTest\TreeMapLib.UnitTest.csproj", "{E72867DF-AC21-453E-8282-86125C617A2B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaUI", "AvaloniaUI\AvaloniaUI.csproj", "{0EF11599-A117-4827-A673-7AB82235EF19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaUI.Browser", "AvaloniaUI.Browser\AvaloniaUI.Browser.csproj", "{F373FD11-D981-4B6E-9C55-9BBA315B12A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaUI.Desktop", "AvaloniaUI.Desktop\AvaloniaUI.Desktop.csproj", "{5F3E6A3A-04FC-42B5-9F35-C8847B59E06E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +41,18 @@ Global
 		{E72867DF-AC21-453E-8282-86125C617A2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E72867DF-AC21-453E-8282-86125C617A2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E72867DF-AC21-453E-8282-86125C617A2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EF11599-A117-4827-A673-7AB82235EF19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EF11599-A117-4827-A673-7AB82235EF19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EF11599-A117-4827-A673-7AB82235EF19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EF11599-A117-4827-A673-7AB82235EF19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F373FD11-D981-4B6E-9C55-9BBA315B12A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F373FD11-D981-4B6E-9C55-9BBA315B12A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F373FD11-D981-4B6E-9C55-9BBA315B12A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F373FD11-D981-4B6E-9C55-9BBA315B12A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F3E6A3A-04FC-42B5-9F35-C8847B59E06E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F3E6A3A-04FC-42B5-9F35-C8847B59E06E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F3E6A3A-04FC-42B5-9F35-C8847B59E06E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F3E6A3A-04FC-42B5-9F35-C8847B59E06E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
