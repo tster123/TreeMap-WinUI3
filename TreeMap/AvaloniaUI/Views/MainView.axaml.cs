@@ -8,8 +8,10 @@ using TreeMap;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using System.Diagnostics;
+using System.Timers;
 using Avalonia;
 using Avalonia.Input;
+using Avalonia.Threading;
 using AvaloniaUI.ViewModels;
 using Serilog;
 using Rect = TreeMap.Rect;
@@ -26,8 +28,47 @@ public partial class MainView : UserControl
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
         RenderDropDown.SelectionChanged += ColoringChanged;
         Canvas.PointerMoved += OnPointerMoved;
-        
+        SizeChanged += MainView_SizeChanged;
         RenderCanvas();
+    }
+
+    private Stopwatch _timeSinceLastTimeChange = new();
+    private Timer? _sizeChangedTimer;
+
+    private void MainView_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (double.IsNaN(e.NewSize.Width)) return;
+        HoverText.Width = HoverText.MaxWidth = HoverText.MinWidth = e.NewSize.Width;
+        HoverArea.Width = HoverArea.MaxWidth = HoverArea.MinWidth = e.NewSize.Width;
+
+        _timeSinceLastTimeChange.Restart();
+        lock (this)
+        {
+            if (_sizeChangedTimer == null)
+            {
+                _sizeChangedTimer = new Timer(TimeSpan.FromMilliseconds(50));
+                _sizeChangedTimer.Elapsed += SizeChangedTimer_Elapsed;
+                _sizeChangedTimer.AutoReset = true;
+                _sizeChangedTimer.Enabled = true;
+            }
+        }
+    }
+
+    private void SizeChangedTimer_Elapsed(object? sender, ElapsedEventArgs e)
+    {
+        lock (this)
+        {
+            if (_timeSinceLastTimeChange.Elapsed.TotalMilliseconds < 300)
+            {
+                // resize has happened in the last 100ms, so likely still dragging
+                return;
+            }
+
+            _sizeChangedTimer.Stop();
+            _sizeChangedTimer.Dispose();
+            _sizeChangedTimer = null;
+        }
+        Dispatcher.UIThread.Invoke(RenderCanvas);
     }
 
     private bool _showContainers;
@@ -205,23 +246,35 @@ public partial class MainView : UserControl
         rect.PointerEntered += (object sender, PointerEventArgs e) =>
         {
             string text = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0");
+            hoverText = text;
             //var model = (MainViewModel)Canvas.DataContext;
             //Task.Run(() => { model.HoveredItem = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0"); });
             //HoverText.Text = 
-            HoverArea.Children.Clear();
-            HoverArea.Children.Add(new TextBlock{Text = text });
+            //HoverArea.Children.Clear();
+            //HoverArea.Children.Add(new TextBlock{Text = text });
+            HoverText.Text = text;
             rect.Fill = new SolidColorBrush(Colors.Azure);
+            hoveredRectangle = rect;
         };
         rect.PointerExited += (object sender, PointerEventArgs e) =>
         {
+            hoveredRectangle = null;
             rect.Fill = brush;
         };
     }
 
+    private string hoverText;
     private Rectangle? hoveredRectangle;
     private IBrush? hoveredBrush;
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (hoveredRectangle != null)
+        {
+            if (hoverText != HoverText.Text)
+            {
+                //HoverText.Text = hoverText;
+            }
+        }
         /*
         Point p = e.GetPosition(Canvas);
         Rectangle found = null;

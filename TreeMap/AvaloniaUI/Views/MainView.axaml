@@ -24,8 +24,8 @@
 			</Grid>
             <CheckBox Name="ShowContainersCheckbox" IsChecked="True">Show Containers</CheckBox>
 		</WrapPanel>
-		<StackPanel Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
-			<TextBlock Name="HoverText" Text="Foo Bar"/>
+		<StackPanel VerticalAlignment="Center" Width="2000" MaxWidth="2000" Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
+			<TextBlock Name="HoverText" Text="Foo Bar" Width="2000" MaxWidth="2000" Height="30" MaxHeight="30"/>
 		</StackPanel>
 		<Canvas Name="Canvas" />
 	</DockPanel>
