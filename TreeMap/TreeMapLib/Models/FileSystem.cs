@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using TreeMapLib;
+﻿using System.Diagnostics;
 
 // ReSharper disable once CheckNamespace
-namespace AvaloniaUI.Models.FileSystem;
+namespace TreeMapLib.Models.FileSystem;
 
 
 public class FileSystemModel : IViewableModel
 {
-
     public List<FileInfo> Files { get; set; }
 
     public FileSystemModel(string path)

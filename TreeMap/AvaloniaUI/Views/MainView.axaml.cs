@@ -11,10 +11,10 @@ using System.Timers;
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.Threading;
-using AvaloniaUI.Models;
-using AvaloniaUI.Models.FileSystem;
 using Serilog;
 using TreeMapLib;
+using TreeMapLib.Models;
+using TreeMapLib.Models.FileSystem;
 using Rect = TreeMapLib.Rect;
 
 namespace AvaloniaUI.Views;
@@ -30,6 +30,8 @@ public partial class MainView : UserControl
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
         RenderDropDown.ItemsSource = model.RenderModes;
         RenderDropDown.SelectionChanged += ColoringChanged;
+        RenderDropDown.SelectedIndex = 0;
+        _showContainers = ShowContainersCheckbox.IsChecked ?? false;
         //Canvas.PointerMoved += OnPointerMoved;
         SizeChanged += MainView_SizeChanged;
         RenderCanvas();
