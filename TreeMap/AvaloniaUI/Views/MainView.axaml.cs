@@ -1,6 +1,5 @@
 ﻿using Avalonia.Controls;
 using System.Collections.Generic;
-using System.IO;
 using System;
 using System.Linq;
 using Avalonia.Interactivity;
@@ -9,7 +8,6 @@ using Avalonia.Media;
 using System.Diagnostics;
 using System.Timers;
 using Avalonia;
-using Avalonia.Input;
 using Avalonia.Threading;
 using Serilog;
 using TreeMapLib;
@@ -21,10 +19,11 @@ namespace AvaloniaUI.Views;
 
 public partial class MainView : UserControl
 {
-    private IViewableModel model;
+    private readonly IViewableModel model;
 
     public MainView()
     {
+        // ReSharper disable once StringLiteralTypo
         model = new FileSystemModel("C:\\Users\\thboo\\OneDrive");
         InitializeComponent();
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
@@ -86,8 +85,7 @@ public partial class MainView : UserControl
 
     private void ColoringChanged(object? sender, SelectionChangedEventArgs e)
     {
-        string? colorBy = RenderDropDown.SelectionBoxItem?.ToString();
-        if (colorBy == null) colorBy = model.RenderModes[0].Name;
+        string colorBy = RenderDropDown.SelectionBoxItem?.ToString() ?? model.RenderModes[0].Name;
         RenderMode? renderMode = model.RenderModes.SingleOrDefault(m => m.Name == colorBy);
         if (renderMode == null)
         {
@@ -112,8 +110,10 @@ public partial class MainView : UserControl
         nextColorIndex = 0;
 
         Stopwatch sw2 = Stopwatch.StartNew();
-        TreeMapPlacer placer = new TreeMapPlacer();
-        placer.RenderContainers = _showContainers;
+        TreeMapPlacer placer = new TreeMapPlacer
+        {
+            RenderContainers = _showContainers
+        };
         ITreeMapInput[] input = model.GetTreeMapInputs();
         TreeMapBox[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
         Log.Information("Buildings placements took {Elapsed}", sw2);
@@ -177,7 +177,6 @@ public partial class MainView : UserControl
 
     private void RenderLeafPlacement(TreeMapBox placement)
     {
-        Brush brush;
         string flavor = colorer.GetFlavor(placement.Item);
 
         if (!flavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
@@ -186,7 +185,7 @@ public partial class MainView : UserControl
             flavorToBrush[flavor] = brushBase;
         }
 
-        brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
+        Brush brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
         
         var rect = new Rectangle
         {
@@ -202,7 +201,7 @@ public partial class MainView : UserControl
         //t.Content = placement.Item.FullName;
         //ToolTipService.SetToolTip(rect, t);
         
-        rect.PointerEntered += (object? sender, PointerEventArgs e) =>
+        rect.PointerEntered += (_, _) =>
         {
             string text = placement.Label + " - " + placement.Size.ToString("N0");
             //hoverText = text;
@@ -215,7 +214,7 @@ public partial class MainView : UserControl
             rect.Fill = new SolidColorBrush(Colors.Azure);
             //hoveredRectangle = rect;
         };
-        rect.PointerExited += (object? sender, PointerEventArgs e) =>
+        rect.PointerExited += (_, _) =>
         {
             //hoveredRectangle = null;
             rect.Fill = brush;
@@ -274,7 +273,7 @@ public partial class MainView : UserControl
     }
     */
 
-    private Color[] colors =
+    private readonly Color[] colors =
     [
         Colors.DarkBlue, Colors.DarkRed, Colors.DarkGreen,Colors.Purple, Colors.DeepPink,
         Colors.Magenta, Colors.Brown, Colors.Coral, Colors.SlateBlue, Colors.Salmon,
@@ -303,7 +302,6 @@ public partial class MainView : UserControl
 
     }
 
-    private static Brush DefaultBrush = CreateBrush(Colors.Black);
     private static Brush CreateBrush(Color color)
     {
         var lightColor = FadeColor(color, 0.4);
@@ -328,16 +326,9 @@ public partial class MainView : UserControl
         };
     }
 
-    private class BrushBase
+    private class BrushBase(Color baseColor)
     {
-        private readonly Color BaseColor;
-        private Brush?[] fadingBrushes;
-
-        public BrushBase(Color baseColor)
-        {
-            BaseColor = baseColor;
-            fadingBrushes = new Brush?[101];
-        }
+        private readonly Brush?[] fadingBrushes = new Brush?[101];
 
         public Brush GetBrushByStrength(double strength)
         {
@@ -349,7 +340,7 @@ public partial class MainView : UserControl
             }
             if (fadingBrushes[strengthInt] == null)
             {
-                fadingBrushes[strengthInt] = CreateBrush(FadeColor(BaseColor, strength));
+                fadingBrushes[strengthInt] = CreateBrush(FadeColor(baseColor, strength));
             }
 
             return fadingBrushes[strengthInt]!;
