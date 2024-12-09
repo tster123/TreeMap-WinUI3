@@ -17,6 +17,20 @@ using Rect = TreeMapLib.Rect;
 
 namespace AvaloniaUI.Views;
 
+/*
+ *  TODO list:
+ * 1) add list of flavors on top with total count & size
+ * 2) add tree view of items on top
+ * 3) allow clicking to select an item (both in tree map and tree view)
+ * 4) implement input file as model
+ * 5) add item size filter to UI
+ * 6) add ability to selectively exclude nodes
+ * 7) add ability to selectively exclude flavors
+ * 8) add small item collapsing
+ * 9) zoomable UI
+ * 10) optimizations to handle 1m+ items
+ */
+
 public partial class MainView : UserControl
 {
     private readonly IViewableModel model;
