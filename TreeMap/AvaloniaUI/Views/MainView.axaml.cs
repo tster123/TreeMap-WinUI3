@@ -4,7 +4,6 @@ using System.IO;
 using System;
 using System.Linq;
 using Avalonia.Interactivity;
-using TreeMap;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using System.Diagnostics;
@@ -12,27 +11,31 @@ using System.Timers;
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.Threading;
-using AvaloniaUI.ViewModels;
+using AvaloniaUI.Models;
+using AvaloniaUI.Models.FileSystem;
 using Serilog;
-using Rect = TreeMap.Rect;
+using TreeMapLib;
+using Rect = TreeMapLib.Rect;
 
 namespace AvaloniaUI.Views;
 
 public partial class MainView : UserControl
 {
-    public List<FileInfo> Files { get; set; }
+    private IViewableModel model;
+
     public MainView()
     {
+        model = new FileSystemModel("C:\\Users\\thboo\\OneDrive");
         InitializeComponent();
-        Files = new DirectoryInfo("C:\\Users\\thboo\\OneDrive").GetFiles("*", SearchOption.AllDirectories).Where(i => i.Length > 100000).ToList();
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
+        RenderDropDown.ItemsSource = model.RenderModes;
         RenderDropDown.SelectionChanged += ColoringChanged;
-        Canvas.PointerMoved += OnPointerMoved;
+        //Canvas.PointerMoved += OnPointerMoved;
         SizeChanged += MainView_SizeChanged;
         RenderCanvas();
     }
 
-    private Stopwatch _timeSinceLastTimeChange = new();
+    private readonly Stopwatch _timeSinceLastTimeChange = new();
     private Timer? _sizeChangedTimer;
 
     private void MainView_SizeChanged(object? sender, SizeChangedEventArgs e)
@@ -64,6 +67,7 @@ public partial class MainView : UserControl
                 return;
             }
 
+            Debug.Assert(_sizeChangedTimer != null);
             _sizeChangedTimer.Stop();
             _sizeChangedTimer.Dispose();
             _sizeChangedTimer = null;
@@ -78,63 +82,23 @@ public partial class MainView : UserControl
         RenderCanvas();
     }
 
-    private void ColoringChanged(object sender, SelectionChangedEventArgs e)
+    private void ColoringChanged(object? sender, SelectionChangedEventArgs e)
     {
-        string colorBy = RenderDropDown.SelectionBoxItem.ToString();
-        if (colorBy == null) colorBy = "Extension";
-        if (colorBy == "Extension")
-        {
-            colorer = new ExtensionColoring();
-        }
-        else if (colorBy == "File Age")
-        {
-            colorer = new AgeColoring();
-        }
-        else if (colorBy == "Extension & Age")
-        {
-            colorer = new ExtensionAndAgeColoring();
-        }
-        else
+        string? colorBy = RenderDropDown.SelectionBoxItem?.ToString();
+        if (colorBy == null) colorBy = model.RenderModes[0].Name;
+        RenderMode? renderMode = model.RenderModes.SingleOrDefault(m => m.Name == colorBy);
+        if (renderMode == null)
         {
             throw new ArgumentException("Cannot find colorer: [" + colorBy + "]");
         }
+        colorer = renderMode.Colorer;
         RenderCanvas();
     }
 
-    private ITreeMapInput<FileSystemNode>[] GetTreeMapInputs()
-    {
-        Folder root = new Folder("", "<root>");
-        foreach (var file in Files)
-        {
-            string[] parts = file.FullName.Split(System.IO.Path.DirectorySeparatorChar);
-            Folder current = root;
-            string name = "";
-            for (int i = 0; i < parts.Length - 1; i++)
-            {
-                string dirName = parts[i];
-                if (!current.Children.TryGetValue(dirName, out Folder? next))
-                {
-                    next = new Folder(current.FullName, parts[i]);
-                    current.Children[dirName] = next;
-                }
-                current = next;
-            }
+    
 
-            current.Files.Add(file);
-        }
-
-        Folder baseDir = root;
-        while (baseDir.Files.Count == 0 && baseDir.Children.Count == 1)
-        {
-            baseDir = baseDir.Children.First().Value;
-        }
-
-        return baseDir.GetTreeMapInput().Children;
-
-    }
-
-    private Dictionary<string, BrushBase> FlavorToBrush = new();
-    private IColorer<FileInfo> colorer = new ExtensionColoring();
+    private Dictionary<string, BrushBase> flavorToBrush = new();
+    private IColorer colorer = new ExtensionColoring();
 
     private void RenderCanvas()
     {
@@ -142,16 +106,16 @@ public partial class MainView : UserControl
         Stopwatch sw = Stopwatch.StartNew();
         Canvas.Children.Clear();
         Log.Information("Cleared children {Elapsed}", sw);
-        FlavorToBrush = new();
+        flavorToBrush = new();
         nextColorIndex = 0;
 
         Stopwatch sw2 = Stopwatch.StartNew();
         TreeMapPlacer placer = new TreeMapPlacer();
         placer.RenderContainers = _showContainers;
-        ITreeMapInput<FileSystemNode>[] input = GetTreeMapInputs();
-        TreeMapBox<FileSystemNode>[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
+        ITreeMapInput[] input = model.GetTreeMapInputs();
+        TreeMapBox[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
         Log.Information("Buildings placements took {Elapsed}", sw2);
-        colorer.Initialize(placements.Select(p => p.Item.FileInfo).Where(f => f != null).Select(f => f!));
+        colorer.Initialize(placements.Select(p => p.Item));
         foreach (var placement in placements)
         {
             if (placement.IsContainer)
@@ -167,12 +131,12 @@ public partial class MainView : UserControl
         Log.Information("RenderCanvas took {Elapsed}", sw);
     }
 
-    private void RenderContainerPlacement(TreeMapBox<FileSystemNode> placement)
+    private void RenderContainerPlacement(TreeMapBox placement)
     {
         Rect r = placement.Rectangle;
         var textBlock = new TextBlock
         {
-            Text = placement.Item.FullName,
+            Text = placement.Label,
             Height = placement.ContainerHeaderHeightPixels,
             FontSize = placement.ContainerHeaderHeightPixels - 2,
             Foreground = new SolidColorBrush(Colors.Black),
@@ -186,7 +150,7 @@ public partial class MainView : UserControl
         header.SetValue(Canvas.TopProperty, r.Y + placement.BorderThicknessPixels);
         header.SetValue(Canvas.LeftProperty, r.X + placement.BorderThicknessPixels);
         textBlock.TextTrimming = TextTrimming.CharacterEllipsis;
-        if (r.Width < 6 * placement.Item.FullName.Length)
+        if (r.Width < 6 * textBlock.Text.Length)
         {
             textBlock.Text = "..." + textBlock.Text.Substring((int)(textBlock.Text.Length - r.Width / 6));
 
@@ -209,26 +173,19 @@ public partial class MainView : UserControl
         border.SetValue(Canvas.LeftProperty, r.X);
     }
 
-    private void RenderLeafPlacement(TreeMapBox<FileSystemNode> placement)
+    private void RenderLeafPlacement(TreeMapBox placement)
     {
         Brush brush;
-        if (placement.Item.FileInfo == null)
-        {
-            brush = DefaultBrush;
-        }
-        else
-        {
-            string flavor = colorer.GetFlavor(placement.Item.FileInfo!);
+        string flavor = colorer.GetFlavor(placement.Item);
 
-            if (!FlavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
-            {
-                brushBase = GenerateNextBrush();
-                FlavorToBrush[flavor] = brushBase;
-            }
-
-            brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item.FileInfo));
+        if (!flavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
+        {
+            brushBase = GenerateNextBrush();
+            flavorToBrush[flavor] = brushBase;
         }
 
+        brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
+        
         var rect = new Rectangle
         {
             Fill = brush,
@@ -243,10 +200,10 @@ public partial class MainView : UserControl
         //t.Content = placement.Item.FullName;
         //ToolTipService.SetToolTip(rect, t);
         
-        rect.PointerEntered += (object sender, PointerEventArgs e) =>
+        rect.PointerEntered += (object? sender, PointerEventArgs e) =>
         {
-            string text = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0");
-            hoverText = text;
+            string text = placement.Label + " - " + placement.Size.ToString("N0");
+            //hoverText = text;
             //var model = (MainViewModel)Canvas.DataContext;
             //Task.Run(() => { model.HoveredItem = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0"); });
             //HoverText.Text = 
@@ -254,15 +211,15 @@ public partial class MainView : UserControl
             //HoverArea.Children.Add(new TextBlock{Text = text });
             HoverText.Text = text;
             rect.Fill = new SolidColorBrush(Colors.Azure);
-            hoveredRectangle = rect;
+            //hoveredRectangle = rect;
         };
-        rect.PointerExited += (object sender, PointerEventArgs e) =>
+        rect.PointerExited += (object? sender, PointerEventArgs e) =>
         {
-            hoveredRectangle = null;
+            //hoveredRectangle = null;
             rect.Fill = brush;
         };
     }
-
+    /*
     private string hoverText;
     private Rectangle? hoveredRectangle;
     private IBrush? hoveredBrush;
@@ -275,7 +232,7 @@ public partial class MainView : UserControl
                 //HoverText.Text = hoverText;
             }
         }
-        /*
+
         Point p = e.GetPosition(Canvas);
         Rectangle found = null;
         foreach (Rectangle r in Canvas.Children.OfType<Rectangle>())
@@ -311,9 +268,9 @@ public partial class MainView : UserControl
         hoveredRectangle = found;
         string str = ((TreeMapBox<FileSystemNode>)found.DataContext).Item.FullName;
         Console.WriteLine(str);
-        //HoverText.Text = 
-        */
+        //HoverText.Text =
     }
+    */
 
     private Color[] colors =
     [
@@ -395,132 +352,5 @@ public partial class MainView : UserControl
 
             return fadingBrushes[strengthInt]!;
         }
-    }
-}
-
-
-
-public class Folder(string parentName, string name)
-{
-    public readonly string ParentName = parentName;
-    public readonly string Name = name;
-    public readonly string FullName = System.IO.Path.Combine(parentName, name);
-    public readonly Dictionary<string, Folder> Children = new();
-    public readonly List<FileInfo> Files = new();
-    private long? _size;
-
-    public long Size
-    {
-        get
-        {
-            if (_size == null)
-            {
-                long s = Files.Sum(f => f.Length);
-                s += Children.Values.Sum(d => d.Size);
-                _size = s;
-            }
-
-            return _size.Value;
-        }
-    }
-
-    public TreeMapInput<FileSystemNode> GetTreeMapInput()
-    {
-        List<ITreeMapInput<FileSystemNode>> children = new();
-        if (Files.Count > 0)
-        {
-            long filesSize = Files.Sum(f => f.Length);
-            List<ITreeMapInput<FileSystemNode>> fileChildren = new();
-            foreach (FileInfo file in Files)
-            {
-                fileChildren.Add(new TreeMapInput<FileSystemNode>(file.Length, new FileSystemNode(FullName, file.Name, file.Length, file), []));
-            }
-
-            children.Add(new TreeMapInput<FileSystemNode>(filesSize, new FileSystemNode(FullName, "<files>", filesSize, null), fileChildren.ToArray()));
-        }
-
-        foreach (var child in Children)
-        {
-            children.Add(child.Value.GetTreeMapInput());
-        }
-
-        return new(Size, new FileSystemNode(ParentName, Name, Size, null), children.ToArray());
-    }
-}
-
-public class FileSystemNode(string folderName, string name, long size, FileInfo? fileInfo)
-{
-    public string FolderName { get; } = folderName;
-    public string Name { get; } = name;
-    public readonly string FullName = System.IO.Path.Combine(folderName, name);
-    public long Size { get; } = size;
-    public FileInfo? FileInfo { get; } = fileInfo;
-
-    public override string ToString() => FileInfo?.FullName ?? System.IO.Path.Combine(FolderName, Name);
-}
-
-public interface IColorer<T>
-{
-    string GetFlavor(T item);
-    double GetColorStrength(T item);
-
-    void Initialize(IEnumerable<T> allItems)
-    {
-    }
-}
-
-public class ExtensionColoring : IColorer<FileInfo>
-{
-    public string GetFlavor(FileInfo file)
-    {
-        return file.Extension.ToLower();
-    }
-
-    public double GetColorStrength(FileInfo file)
-    {
-        return 1;
-    }
-}
-
-public class AgeColoring : IColorer<FileInfo>
-{
-    public virtual string GetFlavor(FileInfo file)
-    {
-        return "";
-    }
-
-    public double GetColorStrength(FileInfo file)
-    {
-        TimeSpan fromStart = GetDate(file).Subtract(minAge);
-        return fromStart.Ticks / tickSpan;
-    }
-
-    private DateTime minAge = DateTime.MaxValue, maxAge = DateTime.MinValue;
-    private double tickSpan;
-    public void Initialize(IEnumerable<FileInfo> allItems)
-    {
-        foreach (FileInfo item in allItems)
-        {
-            DateTime date = GetDate(item);
-            if (minAge > date) minAge = date;
-            if (maxAge < date) maxAge = date;
-        }
-        tickSpan = (maxAge - minAge).Ticks;
-    }
-
-    private static DateTime GetDate(FileInfo file)
-    {
-        if (file.CreationTime.Year < 1990) return file.LastWriteTime;
-        if (file.LastWriteTime.Year < 1990) return file.CreationTime;
-        if (file.LastWriteTime < file.CreationTime) return file.LastWriteTime;
-        return file.CreationTime;
-    }
-}
-
-public class ExtensionAndAgeColoring : AgeColoring
-{
-    public override string GetFlavor(FileInfo file)
-    {
-        return file.Extension.ToLower();
     }
 }

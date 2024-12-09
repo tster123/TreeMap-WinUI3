@@ -1,32 +1,38 @@
 ﻿using System.Diagnostics;
 
-namespace TreeMap;
+namespace TreeMapLib;
 
 public record Rect(double X, double Y, double Width, double Height)
 {
     public readonly double X = X, Y = Y, Width = Width, Height = Height;
 }
-public class TreeMapBox<T>(T item, Rect rectangle)
+public class TreeMapBox(object item, string label, double size, Rect rectangle)
 {
-    public T Item = item;
+    public object Item = item;
     public Rect Rectangle = rectangle;
-    public bool IsContainer = false;
+    public string Label = label;
+    public double Size = size;
+    public bool IsContainer;
     public double ContainerHeaderHeightPixels;
     public double BorderThicknessPixels;
+
+    public override string ToString() => $"{nameof(Label)}: {Label}, {nameof(IsContainer)}: {IsContainer}, {nameof(Rectangle)}: {Rectangle}";
 }
 
-public interface ITreeMapInput<T>
+public interface ITreeMapInput
 {
     public double Size { get; }
-    public T Item { get; }
-    public ITreeMapInput<T>[] Children { get; }
+    public object Item { get; }
+    public string Label { get; }
+    public ITreeMapInput[] Children { get; }
 }
 
-public class TreeMapInput<T>(double size, T item, ITreeMapInput<T>[] children) : ITreeMapInput<T>
+public class TreeMapInput(double size, object item, string label, ITreeMapInput[] children) : ITreeMapInput
 {
     public double Size { get; } = size;
-    public T Item { get; } = item;
-    public ITreeMapInput<T>[] Children { get; } = children;
+    public object Item { get; } = item;
+    public string Label { get; } = label;
+    public ITreeMapInput[] Children { get; } = children;
 }
 
 public class TreeMapPlacer
@@ -48,7 +54,7 @@ public class TreeMapPlacer
     public double ContainerBorderWidthPixels = 2;
 
     private double _totalArea;
-    public IEnumerable<TreeMapBox<T>> GetPlacements<T>(IEnumerable<ITreeMapInput<T>> input, double width, double height)
+    public IEnumerable<TreeMapBox> GetPlacements(IEnumerable<ITreeMapInput> input, double width, double height)
     {
         var sorted = input.Where(i => i.Size > 0).OrderByDescending(i => i.Size).ToList();
         if (sorted.Count == 0) throw new ArgumentException("Must have some elements to sort");
@@ -56,7 +62,7 @@ public class TreeMapPlacer
         return GetPlacementsSorted(sorted, 0, 0, width, height);
     }
 
-    private IEnumerable<TreeMapBox<T>> GetPlacementsSorted<T>(List<ITreeMapInput<T>> sorted, double x, double y, double xPrime, double yPrime)
+    private IEnumerable<TreeMapBox> GetPlacementsSorted(List<ITreeMapInput> sorted, double x, double y, double xPrime, double yPrime)
     {
         if (sorted.Count == 0) yield break;
 
@@ -84,8 +90,8 @@ public class TreeMapPlacer
             if (width > height)
             {
                 double boxWidth = boxArea / (yPrime - y);
-                foreach (TreeMapBox<T> i in RenderNode(sorted[0], new Rect(x, y, boxWidth, yPrime - y))) yield return i;
-                foreach (TreeMapBox<T> i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x + boxWidth, y, xPrime, yPrime))
+                foreach (TreeMapBox i in RenderNode(sorted[0], new Rect(x, y, boxWidth, yPrime - y))) yield return i;
+                foreach (TreeMapBox i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x + boxWidth, y, xPrime, yPrime))
                 {
                     yield return i;
                 }
@@ -93,8 +99,8 @@ public class TreeMapPlacer
             else
             {
                 double boxHeight = boxArea / (xPrime - x);
-                foreach (TreeMapBox<T> i in RenderNode(sorted[0], new Rect(x, y, xPrime - x, boxHeight))) yield return i;
-                foreach (TreeMapBox<T> i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x, y + boxHeight, xPrime, yPrime))
+                foreach (TreeMapBox i in RenderNode(sorted[0], new Rect(x, y, xPrime - x, boxHeight))) yield return i;
+                foreach (TreeMapBox i in GetPlacementsSorted(sorted.Slice(1, sorted.Count - 1), x, y + boxHeight, xPrime, yPrime))
                 {
                     yield return i;
                 }
@@ -136,11 +142,11 @@ public class TreeMapPlacer
         }
     }
 
-    private IEnumerable<TreeMapBox<T>> RenderNode<T>(ITreeMapInput<T> input, Rect rect)
+    private IEnumerable<TreeMapBox> RenderNode(ITreeMapInput input, Rect rect)
     {
         if (input.Children.Length == 0)
         {
-            yield return new TreeMapBox<T>(input.Item, rect);
+            yield return new TreeMapBox(input.Item, input.Label, input.Size, rect);
         }
         else
         {
@@ -154,7 +160,7 @@ public class TreeMapPlacer
                 // check if the container is large enough to render as a container
                 if (rect.Height * rect.Height > _totalArea * MinimumAreaForContainerRender)
                 {
-                    yield return new TreeMapBox<T>(input.Item, rect)
+                    yield return new TreeMapBox(input.Item, input.Label, input.Size, rect)
                     {
                         IsContainer = true,
                         ContainerHeaderHeightPixels = ContainerHeaderHeightPixels - ContainerBorderWidthPixels,
@@ -175,7 +181,7 @@ public class TreeMapPlacer
         }
     }
 
-    private (int, double) CalculateAdditionalBoxesToInclude<T>(List<ITreeMapInput<T>> sorted, double totalSize, double totalArea, double smallSide, double idealBoxSide)
+    private (int, double) CalculateAdditionalBoxesToInclude(List<ITreeMapInput> sorted, double totalSize, double totalArea, double smallSide, double idealBoxSide)
     {
         // for explanation's sake, assume width>height.  
         // Algorithm is to make a vertical partition, and we want to find how many of the following items should be included in

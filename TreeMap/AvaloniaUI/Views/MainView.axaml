@@ -16,16 +16,12 @@
 		<WrapPanel DockPanel.Dock="Top">
 			<Grid RowDefinitions="20, *" Background="Red" Margin="5">
 				<Label Target="RenderDropDown">Rendering Method:</Label>
-				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" SelectedIndex="0">
-					<ComboBoxItem>Extension</ComboBoxItem>
-					<ComboBoxItem>File Age</ComboBoxItem>
-					<ComboBoxItem>Extension &amp; Age</ComboBoxItem>
-				</ComboBox>
+				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" />
 			</Grid>
             <CheckBox Name="ShowContainersCheckbox" IsChecked="True">Show Containers</CheckBox>
 		</WrapPanel>
-		<StackPanel VerticalAlignment="Center" Width="2000" MaxWidth="2000" Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
-			<TextBlock Name="HoverText" Text="Foo Bar" Width="2000" MaxWidth="2000" Height="30" MaxHeight="30"/>
+		<StackPanel VerticalAlignment="Center" Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
+			<TextBlock Name="HoverText" Text="Foo Bar" Height="30" MaxHeight="30"/>
 		</StackPanel>
 		<Canvas Name="Canvas" />
 	</DockPanel>

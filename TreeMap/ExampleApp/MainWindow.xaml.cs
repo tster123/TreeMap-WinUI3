@@ -12,8 +12,9 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml.Shapes;
 using Serilog;
 using TreeMap;
+using TreeMapLib;
 using Color = Windows.UI.Color;
-using Rect = TreeMap.Rect;
+using Rect = TreeMapLib.Rect;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
