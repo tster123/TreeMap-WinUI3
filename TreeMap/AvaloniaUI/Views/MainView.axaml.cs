@@ -8,12 +8,15 @@ using Avalonia.Media;
 using System.Diagnostics;
 using System.Timers;
 using Avalonia;
+using Avalonia.Media.Immutable;
+using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Serilog;
 using TreeMapLib;
 using TreeMapLib.Models;
 using TreeMapLib.Models.FileSystem;
 using Rect = TreeMapLib.Rect;
+using Avalonia.Input;
 
 namespace AvaloniaUI.Views;
 
@@ -34,7 +37,8 @@ namespace AvaloniaUI.Views;
 public partial class MainView : UserControl
 {
     private readonly IViewableModel model;
-
+    public Window? Window;
+    private bool CustomerRender = true;
     public MainView()
     {
         // ReSharper disable once StringLiteralTypo
@@ -45,9 +49,41 @@ public partial class MainView : UserControl
         RenderDropDown.SelectionChanged += ColoringChanged;
         RenderDropDown.SelectedIndex = 0;
         _showContainers = ShowContainersCheckbox.IsChecked ?? false;
-        //Canvas.PointerMoved += OnPointerMoved;
+
+        PointerMoved += OnPointerMoved;
         SizeChanged += MainView_SizeChanged;
+        AttachCustomVisual(Canvas);
         RenderCanvas();
+    }
+
+    private readonly TreeMapVisualHandler treeMapVisualHandler = new();
+    private CompositionCustomVisual? _customVisual;
+    void AttachCustomVisual(Visual v)
+    {
+        if (!CustomerRender) return;
+        void Update()
+        {
+            if (_customVisual == null)
+                return;
+            var h = (float)Math.Min(v.Bounds.Height, v.Bounds.Width / 3);
+            _customVisual.Size = new(v.Bounds.Width, h);
+            _customVisual.Offset = new(0, (v.Bounds.Height - h) / 2, 0);
+        }
+        v.AttachedToVisualTree += (sender, args) =>
+        {
+            var compositor = ElementComposition.GetElementVisual(v)?.Compositor;
+            if (compositor == null || _customVisual?.Compositor == compositor)
+                return;
+            _customVisual = compositor.CreateCustomVisual(treeMapVisualHandler);
+            ElementComposition.SetElementChildVisual(v, _customVisual);
+            Update();
+        };
+
+        v.PropertyChanged += (_, a) =>
+        {
+            if (a.Property == BoundsProperty)
+                Update();
+        };
     }
 
     private readonly Stopwatch _timeSinceLastTimeChange = new();
@@ -57,7 +93,7 @@ public partial class MainView : UserControl
     {
         if (double.IsNaN(e.NewSize.Width)) return;
         HoverText.Width = HoverText.MaxWidth = HoverText.MinWidth = e.NewSize.Width;
-        HoverArea.Width = HoverArea.MaxWidth = HoverArea.MinWidth = e.NewSize.Width;
+        //HoverArea.Width = HoverArea.MaxWidth = HoverArea.MinWidth = e.NewSize.Width;
 
         _timeSinceLastTimeChange.Restart();
         lock (this)
@@ -118,7 +154,16 @@ public partial class MainView : UserControl
     {
         if (Canvas == null || Canvas.Bounds.Width <= 0 || Canvas.Bounds.Height <= 0) return;
         Stopwatch sw = Stopwatch.StartNew();
-        Canvas.Children.Clear();
+
+        if (!CustomerRender)
+        {
+            Canvas.Children.Clear();
+        }
+        else
+        {
+            treeMapVisualHandler.Clear();
+        }
+        
         Log.Information("Cleared children {Elapsed}", sw);
         flavorToBrush = new();
         nextColorIndex = 0;
@@ -189,6 +234,7 @@ public partial class MainView : UserControl
         border.SetValue(Canvas.LeftProperty, r.X);
     }
 
+    private Rectangle? clicked;
     private void RenderLeafPlacement(TreeMapBox placement)
     {
         string flavor = colorer.GetFlavor(placement.Item);
@@ -199,7 +245,7 @@ public partial class MainView : UserControl
             flavorToBrush[flavor] = brushBase;
         }
 
-        Brush brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
+        IImmutableBrush brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
         
         var rect = new Rectangle
         {
@@ -207,50 +253,82 @@ public partial class MainView : UserControl
             Height = placement.Rectangle.Height,
             Width = placement.Rectangle.Width,
         };
-        Canvas.Children.Add(rect);
-        rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
-        rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
+        var myRect = new MyRect(rect, brush, placement.Rectangle);
+        if (CustomerRender)
+        {
+            treeMapVisualHandler.AddRectangle(myRect);
+        }
+        else
+        {
+            Canvas.Children.Add(rect);
+            rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
+            rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
+        }
+
+        
         rect.DataContext = placement;
         //ToolTip t = new ToolTip();
         //t.Content = placement.Item.FullName;
         //ToolTipService.SetToolTip(rect, t);
-        
+        rect.PointerPressed += (_, _) =>
+        {
+            clicked = rect;
+        };
         rect.PointerEntered += (_, _) =>
         {
             string text = placement.Label + " - " + placement.Size.ToString("N0");
-            //hoverText = text;
-            //var model = (MainViewModel)Canvas.DataContext;
-            //Task.Run(() => { model.HoveredItem = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0"); });
-            //HoverText.Text = 
-            //HoverArea.Children.Clear();
-            //HoverArea.Children.Add(new TextBlock{Text = text });
             HoverText.Text = text;
-            rect.Fill = new SolidColorBrush(Colors.Azure);
-            //hoveredRectangle = rect;
+
+            if (CustomerRender)
+            {
+                myRect.Brush = new ImmutableSolidColorBrush(Colors.Azure);
+                treeMapVisualHandler.AddRectangle(myRect);
+            }
+            else
+            {
+                rect.Fill = new SolidColorBrush(Colors.Azure);
+            }
+            
+            
+            
+            if (clicked != null)
+            {
+                Color[] c = [Colors.Red, Colors.Aqua, Colors.Blue, Colors.Green, Colors.SaddleBrown, Colors.Yellow, Colors.Violet, Colors.SteelBlue];
+                clicked.Fill = new SolidColorBrush(c[new Random().Next(c.Length)]);
+            }
         };
         rect.PointerExited += (_, _) =>
         {
             //hoveredRectangle = null;
-            rect.Fill = brush;
+            if (CustomerRender)
+            {
+                myRect.Brush = brush;
+                treeMapVisualHandler.AddRectangle(myRect);
+            }
+            else
+            {
+                rect.Fill = brush;
+            }
+            
         };
     }
-    /*
+
     private string hoverText;
-    private Rectangle? hoveredRectangle;
-    private IBrush? hoveredBrush;
+    private MyRect? hoveredRectangle;
+    private IImmutableBrush? hoveredBrush;
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
         if (hoveredRectangle != null)
         {
             if (hoverText != HoverText.Text)
             {
-                //HoverText.Text = hoverText;
+                HoverText.Text = hoverText;
             }
         }
 
         Point p = e.GetPosition(Canvas);
-        Rectangle found = null;
-        foreach (Rectangle r in Canvas.Children.OfType<Rectangle>())
+        MyRect found = null;
+        foreach (MyRect r in treeMapVisualHandler.allRectangles)
         {
             if (r.Bounds.Left < p.X && r.Bounds.Right > p.X && r.Bounds.Top < p.Y && r.Bounds.Bottom > p.Y)
             {
@@ -266,7 +344,9 @@ public partial class MainView : UserControl
             if (hoveredRectangle == null) return;
 
             // set the old one back to normal
-            hoveredRectangle.Fill = hoveredBrush;
+            hoveredRectangle.Brush = hoveredBrush;
+            treeMapVisualHandler.MarkRectangleDirty(hoveredRectangle);
+            _customVisual?.SendHandlerMessage(TreeMapVisualHandler.CheckRefreshMessage);
             hoveredRectangle = null;
             hoveredBrush = null;
             return;
@@ -275,17 +355,21 @@ public partial class MainView : UserControl
         if (hoveredRectangle != null)
         {
             // set the old one back to normal
-            hoveredRectangle.Fill = hoveredBrush;
+            hoveredRectangle.Brush = hoveredBrush;
+            treeMapVisualHandler.MarkRectangleDirty(hoveredRectangle);
         }
 
-        hoveredBrush = found.Fill;
-        found.Fill = new SolidColorBrush(Colors.Azure);
+        hoveredBrush = found.Brush;
+        found.Brush = new ImmutableSolidColorBrush(Colors.Azure);
         hoveredRectangle = found;
-        string str = ((TreeMapBox<FileSystemNode>)found.DataContext).Item.FullName;
+        string str = found.Rect.DataContext?.ToString() ?? "<not found>";
+        hoverText = str;
+        treeMapVisualHandler.MarkRectangleDirty(hoveredRectangle);
+        _customVisual?.SendHandlerMessage(TreeMapVisualHandler.CheckRefreshMessage);
         Console.WriteLine(str);
-        //HoverText.Text =
+        HoverText.Text = str;
     }
-    */
+
 
     private readonly Color[] colors =
     [
@@ -316,35 +400,25 @@ public partial class MainView : UserControl
 
     }
 
-    private static Brush CreateBrush(Color color)
+    private static IImmutableBrush CreateBrush(Color color)
     {
-        var lightColor = FadeColor(color, 0.4);
-        return new RadialGradientBrush
-        {
-            Center =RelativePoint.BottomRight,
-            RadiusX = RelativeScalar.End,
-            RadiusY = RelativeScalar.End,
-            GradientStops =
-            {
-                new GradientStop
-                {
-                    Color = lightColor,
-                    Offset = 0
-                },
-                new GradientStop
-                {
-                    Color = color,
-                    Offset = 1
-                }
-            }
-        };
+        IEnumerable<ImmutableGradientStop> gradientStops =
+        [
+            new ImmutableGradientStop(0, FadeColor(color, 0.4)),
+            new ImmutableGradientStop(1, color)
+        ];
+        return new ImmutableRadialGradientBrush(
+            gradientStops: new List<ImmutableGradientStop>(gradientStops),
+            center: RelativePoint.BottomRight,
+            radiusX: RelativeScalar.End,
+            radiusY: RelativeScalar.End);
     }
 
     private class BrushBase(Color baseColor)
     {
-        private readonly Brush?[] fadingBrushes = new Brush?[101];
+        private readonly IImmutableBrush?[] fadingBrushes = new IImmutableBrush?[101];
 
-        public Brush GetBrushByStrength(double strength)
+        public IImmutableBrush GetBrushByStrength(double strength)
         {
             int strengthInt = (int)(strength * 100);
             if (strength < 0)
@@ -360,4 +434,81 @@ public partial class MainView : UserControl
             return fadingBrushes[strengthInt]!;
         }
     }
+
+    class MyRect (Rectangle rect, IImmutableBrush brush, Rect r)
+    {
+        public readonly Rectangle Rect = rect;
+        public readonly Avalonia.Rect Bounds = new(r.X, r.Y, r.Width, r.Height);
+        public IImmutableBrush Brush = brush;
+    }
+
+    class TreeMapVisualHandler : CompositionCustomVisualHandler
+    {
+        public readonly List<MyRect> allRectangles = new();
+        private readonly List<MyRect> toRefresh = new();
+        public static readonly object CheckRefreshMessage = new();
+        private bool refreshWhole;
+
+        public TreeMapVisualHandler()
+        {
+        }
+
+        public void AddRectangle(MyRect rect)
+        {
+            allRectangles.Add(rect);
+        }
+
+        public void Clear()
+        {
+            allRectangles.Clear();
+        }
+
+        public void MarkRectangleDirty(MyRect rect)
+        {
+            toRefresh.Add(rect);
+            //Invalidate(rect.Bounds);
+        }
+
+        public override void OnMessage(object message)
+        {
+            if (message == CheckRefreshMessage)
+            {
+                RegisterForNextAnimationFrameUpdate();
+            }
+        }
+
+        public void MarkCanvasDirty()
+        {
+            refreshWhole = true;
+        }
+
+        public override void OnRender(ImmediateDrawingContext drawingContext)
+        {
+            foreach (MyRect r in allRectangles)
+            {
+                drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+            }
+        }
+
+        public override void OnAnimationFrameUpdate()
+        {
+            if (refreshWhole)
+            {
+                Invalidate();
+                refreshWhole = false;
+            }
+            else
+            {
+                foreach (MyRect rect in toRefresh)
+                {
+                    Invalidate(rect.Bounds);
+                }
+                toRefresh.Clear();
+            }
+            RegisterForNextAnimationFrameUpdate();
+        }
+
+
+    }
 }
+
