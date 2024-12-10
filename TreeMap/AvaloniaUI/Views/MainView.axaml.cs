@@ -445,9 +445,9 @@ public partial class MainView : UserControl
     class TreeMapVisualHandler : CompositionCustomVisualHandler
     {
         public readonly List<MyRect> allRectangles = new();
-        private readonly List<MyRect> toRefresh = new();
+        private readonly HashSet<MyRect> toRefresh = new();
         public static readonly object CheckRefreshMessage = new();
-        private bool refreshWhole;
+        private bool refreshWhole = true;
 
         public TreeMapVisualHandler()
         {
@@ -456,17 +456,18 @@ public partial class MainView : UserControl
         public void AddRectangle(MyRect rect)
         {
             allRectangles.Add(rect);
+            lock (toRefresh) toRefresh.Add(rect);
         }
 
         public void Clear()
         {
             allRectangles.Clear();
+            refreshWhole = true;
         }
 
         public void MarkRectangleDirty(MyRect rect)
         {
-            toRefresh.Add(rect);
-            //Invalidate(rect.Bounds);
+            lock(toRefresh) toRefresh.Add(rect);
         }
 
         public override void OnMessage(object message)
@@ -484,30 +485,49 @@ public partial class MainView : UserControl
 
         public override void OnRender(ImmediateDrawingContext drawingContext)
         {
-            foreach (MyRect r in allRectangles)
+            if (refreshWhole)
             {
-                drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+                foreach (MyRect r in allRectangles)
+                {
+                    drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+                }
+                lock (toRefresh) toRefresh.Clear();
+                refreshWhole = false;
+            }
+            else
+            {
+                lock (toRefresh)
+                {
+                    foreach (MyRect r in toRefresh)
+                    {
+                        drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+                    }
+
+                    toRefresh.Clear();
+                }
             }
         }
 
+        
         public override void OnAnimationFrameUpdate()
         {
             if (refreshWhole)
             {
                 Invalidate();
-                refreshWhole = false;
             }
             else
             {
-                foreach (MyRect rect in toRefresh)
+                lock (toRefresh)
                 {
-                    Invalidate(rect.Bounds);
+                    foreach (MyRect rect in toRefresh)
+                    {
+                        Invalidate(rect.Bounds);
+                        Log.Logger.Information(rect.Bounds.ToString());
+                    }
                 }
-                toRefresh.Clear();
             }
-            RegisterForNextAnimationFrameUpdate();
+            //RegisterForNextAnimationFrameUpdate();
         }
-
 
     }
 }
