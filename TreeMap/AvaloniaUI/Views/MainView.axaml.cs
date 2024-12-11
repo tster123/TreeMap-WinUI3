@@ -501,6 +501,7 @@ public partial class MainView : UserControl
                     foreach (MyRect r in toRefresh)
                     {
                         drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+                        Log.Logger.Information("Rendered: " + BoundsStr(r.Bounds));
                     }
 
                     toRefresh.Clear();
@@ -508,6 +509,10 @@ public partial class MainView : UserControl
             }
         }
 
+        private string BoundsStr(Avalonia.Rect r)
+        {
+            return $"x [{r.X} - {r.X + r.Width}], y [{r.Y} - {r.Y + r.Height}]";
+        }
         
         public override void OnAnimationFrameUpdate()
         {
@@ -522,7 +527,7 @@ public partial class MainView : UserControl
                     foreach (MyRect rect in toRefresh)
                     {
                         Invalidate(rect.Bounds);
-                        Log.Logger.Information(rect.Bounds.ToString());
+                        Log.Logger.Information("Invalidated: " + BoundsStr(rect.Bounds));
                     }
                 }
             }
