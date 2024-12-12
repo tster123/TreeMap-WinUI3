@@ -42,7 +42,7 @@ public partial class MainView : UserControl
     public MainView()
     {
         // ReSharper disable once StringLiteralTypo
-        model = new FileSystemModel("C:\\Users\\thboo\\OneDrive");
+        model = new FileSystemModel("Q:\\nugetcache");
         InitializeComponent();
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
         RenderDropDown.ItemsSource = model.RenderModes;
@@ -446,6 +446,8 @@ public partial class MainView : UserControl
     {
         public readonly List<MyRect> allRectangles = new();
         private readonly HashSet<MyRect> toRefresh = new();
+        private readonly HashSet<MyRect> toRender = new();
+        private MyRect? toPaint;
         public static readonly object CheckRefreshMessage = new();
         private bool refreshWhole = true;
 
@@ -456,7 +458,7 @@ public partial class MainView : UserControl
         public void AddRectangle(MyRect rect)
         {
             allRectangles.Add(rect);
-            lock (toRefresh) toRefresh.Add(rect);
+            //lock (this) toRefresh.Add(rect);
         }
 
         public void Clear()
@@ -467,14 +469,19 @@ public partial class MainView : UserControl
 
         public void MarkRectangleDirty(MyRect rect)
         {
-            lock(toRefresh) toRefresh.Add(rect);
+            lock(this) toRefresh.Add(rect);
         }
 
+        private bool registered = false;
         public override void OnMessage(object message)
         {
             if (message == CheckRefreshMessage)
             {
-                RegisterForNextAnimationFrameUpdate();
+                if (!registered && toRefresh.Count > 0)
+                {
+                    RegisterForNextAnimationFrameUpdate();
+                    registered = true;
+                }
             }
         }
 
@@ -487,48 +494,94 @@ public partial class MainView : UserControl
         {
             if (refreshWhole)
             {
+                Log.Logger.Information($"Rendering Full!");
                 foreach (MyRect r in allRectangles)
                 {
                     drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
                 }
-                lock (toRefresh) toRefresh.Clear();
                 refreshWhole = false;
             }
             else
             {
+                /*
+                MyRect? willPaint;
                 lock (toRefresh)
                 {
-                    foreach (MyRect r in toRefresh)
-                    {
-                        drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
-                        Log.Logger.Information("Rendered: " + BoundsStr(r.Bounds));
-                    }
-
-                    toRefresh.Clear();
+                    willPaint = toPaint;
+                    toPaint = null;
                 }
+
+                if (willPaint != null)
+                {
+                    drawingContext.DrawRectangle(willPaint.Brush, null, willPaint.Bounds);
+                }
+                */
+                //*
+                lock (this)
+                {
+                    int i = 0;
+                    foreach (MyRect r in toRender)
+                    {
+                        i++;
+                        //drawingContext.DrawRectangle(r.Brush, null, r.Bounds);
+                        Log.Logger.Information($"Rendered {i} of {toRender.Count}: " + BoundsStr(r.Bounds));
+                    }
+                    toRender.Clear();
+                } //*/
+
             }
         }
 
         private string BoundsStr(Avalonia.Rect r)
         {
-            return $"x [{r.X} - {r.X + r.Width}], y [{r.Y} - {r.Y + r.Height}]";
+            //Debug.Assert(r.Right == r.X + r.Width);
+            return $"x [{r.X} - {r.Right}], y [{r.Y} - {r.Bottom}]";
         }
         
         public override void OnAnimationFrameUpdate()
         {
+            registered = false;
+            Log.Logger.Information("OnAnimationFrameUpdate");
             if (refreshWhole)
             {
+                Log.Logger.Information($"Invalidating Full!");
                 Invalidate();
+                lock (this)
+                {
+                    toRefresh.Clear();
+                    toRender.Clear();
+                }
             }
             else
             {
-                lock (toRefresh)
+                lock (this)
                 {
+                    /*
+                    if (toPaint == null)
+                    {
+                        if (toRefresh.TryDequeue(out MyRect? next))
+                        {
+                            toPaint = next;
+                            Log.Logger.Information("Invalidated: " + BoundsStr(toPaint.Bounds));
+                            Invalidate(toPaint.Bounds);
+                        }
+                    }
+
+                    if (toRefresh.Count > 0)
+                    {
+                        RegisterForNextAnimationFrameUpdate();
+                    }
+                    */
+
+                    int i = 0;
                     foreach (MyRect rect in toRefresh)
                     {
+                        i++;
                         Invalidate(rect.Bounds);
-                        Log.Logger.Information("Invalidated: " + BoundsStr(rect.Bounds));
+                        Log.Logger.Information($"Invalidated {i} of {toRefresh.Count}: " + BoundsStr(rect.Bounds));
+                        toRender.Add(rect);
                     }
+                    toRefresh.Clear();
                 }
             }
             //RegisterForNextAnimationFrameUpdate();
