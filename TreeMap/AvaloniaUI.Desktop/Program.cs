@@ -1,6 +1,7 @@
 ﻿using System;
 
 using Avalonia;
+using Avalonia.Rendering.Composition;
 using AvaloniaUI.Views;
 using Serilog;
 
@@ -28,6 +29,10 @@ class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .With(new CompositionOptions()
+            {
+                UseRegionDirtyRectClipping = true
+            })
             .WithInterFont()
             .LogToTrace();
 
