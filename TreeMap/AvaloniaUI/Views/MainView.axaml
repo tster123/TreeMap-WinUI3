@@ -12,15 +12,8 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
 		<vm:MainViewModel />
 	</Design.DataContext>
-	<Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" RowDefinitions="Auto, *, 30" >
-		<WrapPanel Grid.Row="0">
-			<Grid RowDefinitions="20, *" Background="Red" Margin="5">
-				<Label Target="RenderDropDown">Rendering Method:</Label>
-				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" />
-			</Grid>
-            <CheckBox Name="ShowContainersCheckbox" IsChecked="True">Show Containers</CheckBox>
-		</WrapPanel>
-        <Canvas Name="Canvas" Grid.Row="1" />
-        <TextBlock Name="HoverText" Text="Foo Bar" VerticalAlignment="Center" Height="24" Padding="4" Grid.Row="2" Background="Green" />
+	<Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" RowDefinitions="*, 30" >
+        <Canvas Name="Canvas" Grid.Row="0" Background="DarkRed" />
+        <TextBlock Name="HoverText" Text="Foo Bar" VerticalAlignment="Center" Height="24" Padding="4" Grid.Row="1" Background="Green" />
 	</Grid>
 </UserControl>

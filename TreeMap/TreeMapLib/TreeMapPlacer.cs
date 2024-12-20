@@ -66,6 +66,9 @@ public class TreeMapPlacer
     {
         if (sorted.Count == 0) yield break;
 
+
+        // TODO: fix this
+        if (x < xPrime || y < yPrime) yield break;
         Debug.Assert(x < xPrime);
         Debug.Assert(y < yPrime);
 
