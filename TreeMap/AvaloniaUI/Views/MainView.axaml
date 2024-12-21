@@ -23,6 +23,15 @@
 		<StackPanel VerticalAlignment="Center" Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
 			<TextBlock Name="HoverText" Text="Foo Bar" Height="30" MaxHeight="30"/>
 		</StackPanel>
-		<Canvas Name="Canvas" />
+		<Grid RowDefinitions="*, 4, 3*">
+			<Grid ColumnDefinitions="3*, 4, *" Grid.Row="0">
+				<TreeDataGrid Name="ItemTreeGrid" Grid.Column="0" Source="{Binding TreeSource}" BorderBrush="DarkRed" BorderThickness="50" 
+                              Background="Chocolate" />
+				<GridSplitter Grid.Column="1" />
+				<DataGrid Name="FlavorGrid" Grid.Column="2" Background="Chocolate" BorderBrush="DarkRed" BorderThickness="10" Margin="20"/>
+            </Grid>
+            <GridSplitter Grid.Row="1" Background="DarkSlateGray" ResizeDirection="Rows"/>
+            <Canvas Name="Canvas" Grid.Row="2"/>
+        </Grid>
 	</DockPanel>
 </UserControl>

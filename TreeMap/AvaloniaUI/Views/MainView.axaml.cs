@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Timers;
 using Avalonia;
 using Avalonia.Threading;
+using AvaloniaUI.ViewModels;
 using Serilog;
 using TreeMapLib;
 using TreeMapLib.Models;
@@ -34,7 +35,7 @@ namespace AvaloniaUI.Views;
 public partial class MainView : UserControl
 {
     private readonly IViewableModel model;
-
+    public MainViewModel? ViewModel;
     public MainView()
     {
         // ReSharper disable once StringLiteralTypo
@@ -46,7 +47,8 @@ public partial class MainView : UserControl
         RenderDropDown.SelectedIndex = 0;
         _showContainers = ShowContainersCheckbox.IsChecked ?? false;
         //Canvas.PointerMoved += OnPointerMoved;
-        SizeChanged += MainView_SizeChanged;
+        Canvas.SizeChanged += MainView_SizeChanged;
+        //SizeChanged += MainView_SizeChanged;
         RenderCanvas();
     }
 
@@ -129,6 +131,9 @@ public partial class MainView : UserControl
             RenderContainers = _showContainers
         };
         ITreeMapInput[] input = model.GetTreeMapInputs();
+        ViewModel!.Items.Clear();
+        foreach (var i in input) { ViewModel.Items.Add(i);}
+        //viewModel.Items.AddRange(input);
         TreeMapBox[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
         Log.Information("Buildings placements took {Elapsed}", sw2);
         colorer.Initialize(placements.Select(p => p.Item));
