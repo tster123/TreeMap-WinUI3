@@ -8,6 +8,7 @@ public interface IViewableModel
     public RenderMode[] RenderModes { get; }
     public ITreeMapInput[] GetTreeMapInputs();
     public string GetHoverText(object item);
+    public string[] InfoColumns { get; }
 }
 
 public class RenderMode(string name, IColorer colorer)

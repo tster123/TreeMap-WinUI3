@@ -9,6 +9,5 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
-        Main.ViewModel = viewModel;
     }
 }

@@ -25,14 +25,16 @@ public interface ITreeMapInput
     public object Item { get; }
     public string Label { get; }
     public ITreeMapInput[] Children { get; }
+    public string GetInfo(string column);
 }
 
-public class TreeMapInput(double size, object item, string label, ITreeMapInput[] children) : ITreeMapInput
+public abstract class TreeMapInput(double size, object item, string label, ITreeMapInput[] children) : ITreeMapInput
 {
     public double Size { get; } = size;
     public object Item { get; } = item;
     public string Label { get; } = label;
     public ITreeMapInput[] Children { get; } = children;
+    public abstract string GetInfo(string column);
 }
 
 public class TreeMapPlacer
@@ -158,7 +160,9 @@ public class TreeMapPlacer
             if (RenderContainers && input.Children.Length > 0)
             {
                 // check if the container is large enough to render as a container
-                if (rect.Height * rect.Height > _totalArea * MinimumAreaForContainerRender)
+                if (rect.Height * rect.Height > _totalArea * MinimumAreaForContainerRender &&
+                    rect.Width > ContainerBorderWidthPixels * 3 &&
+                    rect.Height > ContainerHeaderHeightPixels * 2)
                 {
                     yield return new TreeMapBox(input.Item, input.Label, input.Size, rect)
                     {

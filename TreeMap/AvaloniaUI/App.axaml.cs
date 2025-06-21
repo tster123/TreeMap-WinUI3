@@ -20,17 +20,13 @@ public partial class App : Application
         // Line below is needed to remove Avalonia data validation.
         // Without this line you will get duplicate validations from both Avalonia and CT
         BindingPlugins.DataValidators.RemoveAt(0);
-        MainViewModel viewModel = new();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(viewModel);
+            desktop.MainWindow = new MainWindow(new MainViewModel());
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            singleViewPlatform.MainView = new MainView
-            {
-                DataContext = viewModel
-            };
+            singleViewPlatform.MainView = new MainView();
         }
 
         base.OnFrameworkInitializationCompleted();

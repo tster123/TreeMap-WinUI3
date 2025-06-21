@@ -6,6 +6,8 @@ namespace TreeMapLib.Models.FileSystem;
 
 public class FileSystemModel : IViewableModel
 {
+    public const string COL_FileCount = "FileCount", COL_LastModified = "Last Modified";
+
     public List<FileInfo> Files { get; set; }
 
     public FileSystemModel(string path)
@@ -52,18 +54,60 @@ public class FileSystemModel : IViewableModel
         new("Extension + Age", new ExtensionAndAgeColoring())
     ];
     public string GetHoverText(object item) => ((FileSystemNode)item).HoverText;
+    public string[] InfoColumns => [COL_FileCount, COL_LastModified];
 }
 
-public class FileSystemNode(string folderName, string name, long size, FileInfo? fileInfo)
+public class FileSystemNode(string folderName, string name, long size, FileInfo? fileInfo = null, DirectoryInfo? dirInfo = null)
 {
     public string FolderName { get; } = folderName;
     public string Name { get; } = name;
     public readonly string FullName = Path.Combine(folderName, name);
     public long Size { get; } = size;
     public FileInfo? FileInfo { get; } = fileInfo;
+    public DirectoryInfo? DirInfo { get; } = dirInfo;
 
     public override string ToString() => FileInfo?.FullName ?? Path.Combine(FolderName, Name);
     public string HoverText => ToString() + " - " + Size.ToString("N0");
+}
+
+public class FileTreeMapInput(double size, FileSystemNode item, string label, ITreeMapInput[] children)
+    : TreeMapInput(size, item, label, children)
+{
+    private readonly string lastModified = item.FileInfo?.LastWriteTime.ToString("s") ?? "";
+
+
+    public override string GetInfo(string column)
+    {
+        switch (column)
+        {
+            case FileSystemModel.COL_FileCount:
+                return "1";
+            case FileSystemModel.COL_LastModified:
+                return lastModified;
+            default:
+                throw new ArgumentException("Unknown column", nameof(column));
+        }
+    }
+}
+
+public class FolderTreeMapInput(double size, FileSystemNode item, string label, ITreeMapInput[] children, int fileCount)
+    : TreeMapInput(size, item, label, children)
+{
+    private string fileCount = fileCount.ToString("N0"), lastModifed = item.DirInfo?.LastWriteTime.ToString("s") ?? "";
+
+
+    public override string GetInfo(string column)
+    {
+        switch (column)
+        {
+            case FileSystemModel.COL_FileCount:
+                return fileCount;
+            case FileSystemModel.COL_LastModified:
+                return lastModifed;
+            default:
+                throw new ArgumentException("Unknown column", nameof(column));
+        }
+    }
 }
 
 public class Folder(string parentName, string name)
@@ -90,6 +134,26 @@ public class Folder(string parentName, string name)
         }
     }
 
+    private int? _fileCount;
+
+    public int FileCount
+    {
+        get
+        {
+            if (_fileCount == null)
+            {
+                int fc = Files.Count;
+                foreach (var c in Children.Values)
+                {
+                    fc += c.FileCount;
+                }
+
+                _fileCount = fc;
+            }
+            return _fileCount.Value;
+        }
+    }
+
     public TreeMapInput GetTreeMapInput()
     {
         List<ITreeMapInput> children = new();
@@ -100,11 +164,11 @@ public class Folder(string parentName, string name)
             foreach (FileInfo file in Files)
             {
                 var fileNode = new FileSystemNode(FullName, file.Name, file.Length, file);
-                fileChildren.Add(new TreeMapInput(file.Length, fileNode, fileNode.FullName, []));
+                fileChildren.Add(new FileTreeMapInput(file.Length, fileNode, fileNode.FullName, []));
             }
 
-            var filesNode = new FileSystemNode(FullName, "<files>", filesSize, null);
-            children.Add(new TreeMapInput(filesSize, filesNode, filesNode.FullName, fileChildren.ToArray()));
+            var filesNode = new FileSystemNode(FullName, "<files>", filesSize);
+            children.Add(new FolderTreeMapInput(filesSize, filesNode, filesNode.FullName, fileChildren.ToArray(), fileChildren.Count));
         }
 
         foreach (var child in Children)
@@ -112,8 +176,8 @@ public class Folder(string parentName, string name)
             children.Add(child.Value.GetTreeMapInput());
         }
 
-        var containerNode = new FileSystemNode(ParentName, Name, Size, null);
-        return new(Size, containerNode, containerNode.FullName, children.ToArray());
+        var containerNode = new FileSystemNode(ParentName, Name, Size, dirInfo: new DirectoryInfo(FullName));
+        return new FolderTreeMapInput(Size, containerNode, containerNode.FullName, children.ToArray(), FileCount);
     }
 }
 

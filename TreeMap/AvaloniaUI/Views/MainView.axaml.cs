@@ -35,7 +35,8 @@ namespace AvaloniaUI.Views;
 public partial class MainView : UserControl
 {
     private readonly IViewableModel model;
-    public MainViewModel? ViewModel;
+    private MainViewModel ViewModel => (MainViewModel)DataContext;
+
     public MainView()
     {
         // ReSharper disable once StringLiteralTypo
@@ -44,13 +45,18 @@ public partial class MainView : UserControl
         ShowContainersCheckbox.IsCheckedChanged += ShowContainersCheckEvent;
         RenderDropDown.ItemsSource = model.RenderModes;
         RenderDropDown.SelectionChanged += ColoringChanged;
-        RenderDropDown.SelectedIndex = 0;
         _showContainers = ShowContainersCheckbox.IsChecked ?? false;
-        //Canvas.PointerMoved += OnPointerMoved;
         Canvas.SizeChanged += MainView_SizeChanged;
-        //SizeChanged += MainView_SizeChanged;
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        ViewModel.SetModel(model);
+        RenderDropDown.SelectedIndex = 0;
         RenderCanvas();
     }
+
 
     private readonly Stopwatch _timeSinceLastTimeChange = new();
     private Timer? _sizeChangedTimer;
@@ -107,14 +113,13 @@ public partial class MainView : UserControl
         {
             throw new ArgumentException("Cannot find colorer: [" + colorBy + "]");
         }
-        colorer = renderMode.Colorer;
+        ViewModel.Colorer = renderMode.Colorer;
         RenderCanvas();
     }
 
     
 
     private Dictionary<string, BrushBase> flavorToBrush = new();
-    private IColorer colorer = new ExtensionColoring();
 
     private void RenderCanvas()
     {
@@ -136,7 +141,7 @@ public partial class MainView : UserControl
         //viewModel.Items.AddRange(input);
         TreeMapBox[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
         Log.Information("Buildings placements took {Elapsed}", sw2);
-        colorer.Initialize(placements.Select(p => p.Item));
+        ViewModel.Colorer.Initialize(placements.Select(p => p.Item));
         foreach (var placement in placements)
         {
             if (placement.IsContainer)
@@ -196,7 +201,7 @@ public partial class MainView : UserControl
 
     private void RenderLeafPlacement(TreeMapBox placement)
     {
-        string flavor = colorer.GetFlavor(placement.Item);
+        string flavor = ViewModel.Colorer.GetFlavor(placement.Item);
 
         if (!flavorToBrush.TryGetValue(flavor, out BrushBase? brushBase))
         {
@@ -204,7 +209,7 @@ public partial class MainView : UserControl
             flavorToBrush[flavor] = brushBase;
         }
 
-        Brush brush = brushBase.GetBrushByStrength(colorer.GetColorStrength(placement.Item));
+        Brush brush = brushBase.GetBrushByStrength(ViewModel.Colorer.GetColorStrength(placement.Item));
         
         var rect = new Rectangle
         {
@@ -216,81 +221,19 @@ public partial class MainView : UserControl
         rect.SetValue(Canvas.TopProperty, placement.Rectangle.Y);
         rect.SetValue(Canvas.LeftProperty, placement.Rectangle.X);
         rect.DataContext = placement;
-        //ToolTip t = new ToolTip();
-        //t.Content = placement.Item.FullName;
-        //ToolTipService.SetToolTip(rect, t);
         
         rect.PointerEntered += (_, _) =>
         {
             string text = placement.Label + " - " + placement.Size.ToString("N0");
-            //hoverText = text;
-            //var model = (MainViewModel)Canvas.DataContext;
-            //Task.Run(() => { model.HoveredItem = placement.Item.FullName + " - " + placement.Item.Size.ToString("N0"); });
-            //HoverText.Text = 
-            //HoverArea.Children.Clear();
-            //HoverArea.Children.Add(new TextBlock{Text = text });
             HoverText.Text = text;
             rect.Fill = new SolidColorBrush(Colors.Azure);
-            //hoveredRectangle = rect;
         };
         rect.PointerExited += (_, _) =>
         {
-            //hoveredRectangle = null;
             rect.Fill = brush;
         };
     }
-    /*
-    private string hoverText;
-    private Rectangle? hoveredRectangle;
-    private IBrush? hoveredBrush;
-    private void OnPointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (hoveredRectangle != null)
-        {
-            if (hoverText != HoverText.Text)
-            {
-                //HoverText.Text = hoverText;
-            }
-        }
 
-        Point p = e.GetPosition(Canvas);
-        Rectangle found = null;
-        foreach (Rectangle r in Canvas.Children.OfType<Rectangle>())
-        {
-            if (r.Bounds.Left < p.X && r.Bounds.Right > p.X && r.Bounds.Top < p.Y && r.Bounds.Bottom > p.Y)
-            {
-                found = r;
-                break;
-            }
-        }
-
-        if (found == hoveredRectangle) return;
-
-        if (found == null)
-        {
-            if (hoveredRectangle == null) return;
-
-            // set the old one back to normal
-            hoveredRectangle.Fill = hoveredBrush;
-            hoveredRectangle = null;
-            hoveredBrush = null;
-            return;
-        }
-
-        if (hoveredRectangle != null)
-        {
-            // set the old one back to normal
-            hoveredRectangle.Fill = hoveredBrush;
-        }
-
-        hoveredBrush = found.Fill;
-        found.Fill = new SolidColorBrush(Colors.Azure);
-        hoveredRectangle = found;
-        string str = ((TreeMapBox<FileSystemNode>)found.DataContext).Item.FullName;
-        Console.WriteLine(str);
-        //HoverText.Text =
-    }
-    */
 
     private readonly Color[] colors =
     [
