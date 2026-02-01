@@ -30,7 +30,7 @@
                               Background="Chocolate" />
 				<GridSplitter Grid.Column="1" />
 				<!-- summary grid -->
-                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" Background="Purple"/>
+                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" Background="Purple" AutoGenerateColumns="True"/>
             </Grid>
             <GridSplitter Grid.Row="1" Background="DarkSlateGray" ResizeDirection="Rows"/>
 			<!-- Treemap area -->

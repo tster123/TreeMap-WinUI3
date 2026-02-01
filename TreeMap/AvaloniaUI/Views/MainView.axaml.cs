@@ -136,7 +136,7 @@ public partial class MainView : UserControl
             RenderContainers = _showContainers
         };
         ITreeMapInput[] input = model.GetTreeMapInputs();
-        ViewModel!.Items.Clear();
+        ViewModel.Items.Clear();
         foreach (var i in input) { ViewModel.Items.Add(i);}
         //viewModel.Items.AddRange(input);
         TreeMapBox[] placements = placer.GetPlacements(input, Canvas.Bounds.Width, Canvas.Bounds.Height).ToArray();
