@@ -16,11 +16,16 @@ public class FileSystemModel : IViewableModel
     }
     
 
-    public ITreeMapInput[] GetTreeMapInputs()
+    public ITreeMapInput[] GetTreeMapInputs(string? filterText)
     {
         Folder root = new Folder("", "<root>");
         foreach (var file in Files)
         {
+            if (!string.IsNullOrEmpty(filterText))
+            {
+                if (!file.FullName.Contains(filterText)) continue;
+            }
+
             string[] parts = file.FullName.Split(Path.DirectorySeparatorChar);
             Folder current = root;
             for (int i = 0; i < parts.Length - 1; i++)
@@ -242,7 +247,6 @@ public class ExtensionAndAgeColoring : AgeColoring
     public override bool UsesFlavors => true;
     public override string GetFlavorTyped(FileSystemNode file)
     {
-        Debug.Assert(file.FileInfo != null);
         if (file.FileInfo == null) return "";
         return file.FileInfo.Extension.ToLower();
     }

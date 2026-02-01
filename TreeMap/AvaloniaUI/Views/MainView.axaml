@@ -19,6 +19,13 @@
 				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" />
 			</Grid>
             <CheckBox Name="ShowContainersCheckbox" IsChecked="True">Show Containers</CheckBox>
+            <WrapPanel VerticalAlignment="Center">
+				<StackPanel>
+                    <TextBlock>Filter:</TextBlock>
+                    <TextBox Name="FilterTextBox" Width="150"/>
+                </StackPanel>
+                <Button Name="ApplyFilter" Click="ApplyFilter_OnClick">Apply</Button>
+            </WrapPanel>
 		</WrapPanel>
 		<StackPanel VerticalAlignment="Center" Height="30" MaxHeight="30" Name="HoverArea" DockPanel.Dock="Bottom" Background="Green">
 			<TextBlock Name="HoverText" Text="Foo Bar" Height="30" MaxHeight="30"/>
@@ -26,11 +33,12 @@
 		<Grid RowDefinitions="*, 4, 3*">
 			<Grid ColumnDefinitions="3*, 4, *" Grid.Row="0">
 				<!-- Tree grid -->
-                <TreeDataGrid Name="ItemTreeGrid" Grid.Column="0" Source="{Binding TreeSource}" BorderBrush="DarkRed" BorderThickness="50" 
+                <TreeDataGrid Name="ItemTreeGrid" Grid.Column="0" Source="{Binding TreeSource}" BorderBrush="DarkRed" BorderThickness="1" 
                               Background="Chocolate" />
 				<GridSplitter Grid.Column="1" />
 				<!-- summary grid -->
-                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" Background="Purple" AutoGenerateColumns="True"/>
+                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" Background="Purple" AutoGenerateColumns="True">
+                </DataGrid>
             </Grid>
             <GridSplitter Grid.Row="1" Background="DarkSlateGray" ResizeDirection="Rows"/>
 			<!-- Treemap area -->

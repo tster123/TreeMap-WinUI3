@@ -1,9 +1,6 @@
-﻿using System;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls.Models.TreeDataGrid;
 using TreeMapLib;
@@ -13,21 +10,25 @@ namespace AvaloniaUI.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    public ObservableCollection<FlavorGridItem> FlavorGridItems { get; } = new ObservableCollection<FlavorGridItem>();
+    public ObservableCollection<FlavorGridItem> FlavorGridItems { get; } = new();
 
     public readonly ObservableCollection<ITreeMapInput> Items = new();
     public HierarchicalTreeDataGridSource<ITreeMapInput> TreeSource { get; }
     public IColorer Colorer { get; set; }
 
-    public IEnumerable<FlavorGridItem> RecalculateFlavorGridItems()
+    public void RecalculateFlavorGridItems()
     {
         List<FlavorGridItem> ret = new();
         Dictionary<string, FlavorGridItem> map = new();
         double totalSize = 0;
-        foreach (var i in Items)
+        Queue<ITreeMapInput> queue = new(Items);
+
+        while (queue.Count > 0)
         {
+            ITreeMapInput i = queue.Dequeue();
+            foreach (var c in i.Children) queue.Enqueue(c);
             string flavor = Colorer.GetFlavor(i.Item);
-            if (flavor == null || flavor == "") flavor = "<empty>";
+            if (flavor == null || flavor == "") continue;
             if (!map.TryGetValue(flavor, out FlavorGridItem gi))
             {
                 gi = new FlavorGridItem(flavor);
@@ -45,7 +46,8 @@ public class MainViewModel : ViewModelBase
             gi.Percentage = gi.Size / totalSize;
         }
 
-        return ret.OrderByDescending(r => r.Size);
+        FlavorGridItems.Clear();
+        foreach (var i in ret.OrderByDescending(r => r.Size)) FlavorGridItems.Add(i);
     }
 
     public MainViewModel()
@@ -61,7 +63,7 @@ public class MainViewModel : ViewModelBase
                 new TextColumn<ITreeMapInput, string>("Last Modified", i => i.GetInfo("Last Modified"))
             }
         };
-        Items.CollectionChanged += Items_CollectionChanged;
+        //Items.CollectionChanged += Items_CollectionChanged;
     }
 
     public void SetModel(IViewableModel model)
@@ -83,17 +85,17 @@ public class MainViewModel : ViewModelBase
 
     private void Items_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
-        IEnumerable<FlavorGridItem> target = RecalculateFlavorGridItems();
-        FlavorGridItems.Clear();
-        foreach (var i in target) FlavorGridItems.Add(i);
+        //IEnumerable<FlavorGridItem> target = RecalculateFlavorGridItems();
+        //FlavorGridItems.Clear();
+        //foreach (var i in target) FlavorGridItems.Add(i);
         //OnPropertyChanged(new PropertyChangedEventArgs("FlavorGridItems"));
     }
 }
 
 public record FlavorGridItem(string Flavor)
 {
-    public readonly string Flavor = Flavor;
-    public int Count;
-    public double Size;
-    public double Percentage;
+    public string Flavor { get; } = Flavor;
+    public int Count { get; set; }
+    public double Size { get; set; }
+    public double Percentage { get; set; }
 }

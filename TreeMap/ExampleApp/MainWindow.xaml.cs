@@ -53,7 +53,7 @@ public sealed partial class MainWindow : Window
         Stopwatch sw2 = Stopwatch.StartNew();
         TreeMapPlacer placer = new TreeMapPlacer();
         placer.RenderContainers = _showContainers;
-        ITreeMapInput[] input = model.GetTreeMapInputs();
+        ITreeMapInput[] input = model.GetTreeMapInputs(null);
         TreeMapBox[] placements = placer.GetPlacements(input, canvas.ActualWidth, canvas.ActualHeight).ToArray();
         Log.Information("Buildings placements took {Elapsed}", sw2);
         colorer.Initialize(placements.Select(p => p.Item));

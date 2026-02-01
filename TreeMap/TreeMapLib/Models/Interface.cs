@@ -6,7 +6,7 @@ namespace TreeMapLib.Models;
 public interface IViewableModel
 {
     public RenderMode[] RenderModes { get; }
-    public ITreeMapInput[] GetTreeMapInputs();
+    public ITreeMapInput[] GetTreeMapInputs(string? filterText);
     public string GetHoverText(object item);
     public string[] InfoColumns { get; }
 }

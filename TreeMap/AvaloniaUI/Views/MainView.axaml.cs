@@ -55,6 +55,13 @@ public partial class MainView : UserControl
         ViewModel.SetModel(model);
         RenderDropDown.SelectedIndex = 0;
         RenderCanvas();
+        ViewModel.RecalculateFlavorGridItems();
+    }
+
+    private void ApplyFilter_OnClick(object? sender, RoutedEventArgs e)
+    {
+        RenderCanvas();
+        ViewModel.RecalculateFlavorGridItems();
     }
 
 
@@ -135,7 +142,7 @@ public partial class MainView : UserControl
         {
             RenderContainers = _showContainers
         };
-        ITreeMapInput[] input = model.GetTreeMapInputs();
+        ITreeMapInput[] input = model.GetTreeMapInputs(FilterTextBox.Text);
         ViewModel.Items.Clear();
         foreach (var i in input) { ViewModel.Items.Add(i);}
         //viewModel.Items.AddRange(input);
