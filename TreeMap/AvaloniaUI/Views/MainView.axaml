@@ -5,8 +5,7 @@
              xmlns:vm="clr-namespace:AvaloniaUI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.MainView"
-             x:DataType="vm:MainViewModel"
-             Background="Aqua">
+             x:DataType="vm:MainViewModel">
 	<Design.DataContext>
 		<!-- This only sets the DataContext for the previewer in an IDE,
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
@@ -14,7 +13,7 @@
 	</Design.DataContext>
 	<DockPanel VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 		<WrapPanel DockPanel.Dock="Top">
-			<Grid RowDefinitions="20, *" Background="Red" Margin="5">
+			<Grid RowDefinitions="20, *" Margin="5">
 				<Label Target="RenderDropDown">Rendering Method:</Label>
 				<ComboBox Name="RenderDropDown" Width="150" Grid.Row="1" />
 			</Grid>
@@ -33,11 +32,10 @@
 		<Grid RowDefinitions="*, 4, 3*">
 			<Grid ColumnDefinitions="3*, 4, *" Grid.Row="0">
 				<!-- Tree grid -->
-                <TreeDataGrid Name="ItemTreeGrid" Grid.Column="0" Source="{Binding TreeSource}" BorderBrush="DarkRed" BorderThickness="1" 
-                              Background="Chocolate" />
+                <TreeDataGrid Name="ItemTreeGrid" Grid.Column="0" Source="{Binding TreeSource}" BorderBrush="DarkRed" BorderThickness="1"/>
 				<GridSplitter Grid.Column="1" />
 				<!-- summary grid -->
-                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" Background="Purple" AutoGenerateColumns="True">
+                <DataGrid Name="FlavorGrid" Grid.Column="2" Margin="5" ItemsSource="{Binding FlavorGridItems}" AutoGenerateColumns="True">
                 </DataGrid>
             </Grid>
             <GridSplitter Grid.Row="1" Background="DarkSlateGray" ResizeDirection="Rows"/>
